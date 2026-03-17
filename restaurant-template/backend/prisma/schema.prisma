@@ -1,0 +1,49 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Essencial para o Prisma funcionar
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      // ... resto igual
+}
+
+model Table {
+  id     String  @id @default(uuid())
+  number Int     @unique // Provavelmente você não quer duas mesas com o mesmo número
+  status String  @default("AVAILABLE")
+  orders Order[] // Relação oposta: Uma mesa tem muitos pedidos
+}
+
+model Product {
+  id         String      @id @default(uuid())
+  name       String
+  price      Float
+  orderItems OrderItem[] // Relação oposta
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  tableId   String
+  status    String      @default("OPEN")
+  createdAt DateTime    @default(now())
+  
+  // Relações explicitadas:
+  table     Table       @relation(fields: [tableId], references: [id])
+  items     OrderItem[]
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+
+  // Relações explicitadas:
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+}
