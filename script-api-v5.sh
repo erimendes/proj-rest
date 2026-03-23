@@ -71,33 +71,74 @@ cat <<EOF > src/app.module.ts
 // src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ProductsModule } from './products/products.module.js';
-import { UserModule } from './user/user.module.js';
-import { PostModule } from './post/post.module.js';
-import { AdminModule } from './admin/admin.module.js';
+
+// 🔹 Prisma
 import { PrismaModule } from './prisma/prisma.module.js';
+
+// 🔹 Módulos de recursos
+import { ProductsModule } from './products/products.module.js';   // Products / Product
+import { CategoryModule } from './category/category.module.js';   // Category
+import { UserModule } from './user/user.module.js';               // User
+import { PostModule } from './post/post.module.js';               // Post
+import { TableModule } from './table/table.module.js';            // Table
+import { OrderModule } from './order/order.module.js';            // Order / OrderItem
+import { AdminModule } from './admin/admin.module.js';            // Admin
+
+// 🔹 Módulo de Autenticação (Auth)
+import { AuthModule } from './auth/auth.module.js';               // Auth (login, JWT, guards)
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+
+    // 🔹 Core
     PrismaModule,
-    ProductsModule,
+
+    // 🔹 Recursos do schema
+    ProductsModule,    // Product
+    CategoryModule,    // Category
+    UserModule,        // User
+    PostModule,        // Post
+    TableModule,       // Table
+    OrderModule,       // Order / OrderItem
+    AdminModule,       // Admin
+
+    // 🔹 Autenticação
     AuthModule,
-    UserModule, 
-    PostModule, 
-    AdminModule],
+  ],
   controllers: [],
   providers: [],
 })
 export class AppModule {}
 EOF
 
-echo "📁 Gerando Recursos (Resources)..."
-# Agora o 'nest g res' não vai falhar no npm install interno
-npx nest g res products --no-spec --no-flat
-npx nest g res user --no-spec --no-flat
-npx nest g res post --no-spec --no-flat
-npx nest g res admin --no-spec --no-flat
+echo "📁 Gerando Resources (Resources) com base no schema.prisma..."
+
+# --- MÓDULO DE PRODUTOS / CARDÁPIO ---
+# Products: Product
+npx nest g res products --no-spec --no-flat        # 🔹 Incluído ProductsModule
+# Category: Category
+npx nest g res category --no-spec --no-flat        # 🔹 Incluído CategoryModule
+
+# --- MÓDULO DE USUÁRIOS ---
+# User: User
+npx nest g res user --no-spec --no-flat            # 🔹 Incluído UserModule
+
+# --- MÓDULO DE POSTAGENS ---
+# Post: Post
+npx nest g res post --no-spec --no-flat            # 🔹 Incluído PostModule
+
+# --- MÓDULO DE ATENDIMENTO ---
+# Table: Table
+npx nest g res table --no-spec --no-flat           # 🔹 Incluído TableModule
+
+# --- MÓDULO DE PEDIDOS ---
+# Order: Order (inclui OrderItem internamente)
+npx nest g res order --no-spec --no-flat           # 🔹 Incluído OrderModule
+
+# --- MÓDULO DE ADMIN ---
+# Admin: para funções administrativas gerais
+npx nest g res admin --no-spec --no-flat           # 🔹 Incluído AdminModule
 
 # Criando pastas extras para organização
 echo "📁 Criando estrutura Common e Auth..."
@@ -368,6 +409,11 @@ EOF
 echo "📦 Gerando Prisma Client..."
 ####################################
 npx prisma generate
+
+#########################################
+echo "📦 Criando primeira migração..."
+#########################################
+npx prisma migrate dev --name init
 
 ####################################
 echo "📦 Criando src/user/user.service.ts  "
