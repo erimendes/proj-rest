@@ -1,0 +1,54 @@
+curl -X POST http://localhost:3000/user \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test", "email": "test@test.com", "password": "senha123"}'
+
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test3","email":"test3@test.com","password":"123456"}'
+
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"123456"}'
+
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test5","email":"invalido","password":"123"}'
+
+curl -X POST http://localhost:3000/products \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Teclado Wifi", "price": 400.00, "description": "Bluetooth e Switch Blue"}'
+
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"login2","email":"login2@test.com","password":"123456"}'
+
+curl -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"login2@test.com","password":"123456"}'
+
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice","email":"alice@test.com","password":"123456"}'
+
+TOKENALICE=$(curl -s -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"alice@test.com","password":"123456"}' | jq -r .access_token)
+
+
+curl -H "Authorization: Bearer $TOKENALICE" http://localhost:3000/admin
+
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '
+{
+  "name": "Bob",
+  "email": "bob@test.com",
+  "password": "123456",
+  "role": "ADMIN"
+}'
+
+TOKENBOB=$(curl -s -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"bob@test.com","password":"123456"}' | jq -r .access_token)
+
+curl -H "Authorization: Bearer $TOKENBOB" http://localhost:3000/admin
