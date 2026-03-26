@@ -1,0 +1,114 @@
+[
+  {
+    "categoria": "Hambúrgueres",
+    "produtos": [
+      {"name": "X-Burger", "price": 25.90, "description": "Pão e carne"},
+      {"name": "X-Salada", "price": 28.50, "description": "Pão, carne e salada"},
+      {"name": "Bacon Blast", "price": 34.00, "description": "Muito bacon"}
+    ]
+  },
+  {
+    "categoria": "Bebidas",
+    "produtos": [
+      {"name": "Coca-Cola", "price": 6.50, "description": "Lata 350ml"},
+      {"name": "Suco Natural", "price": 12.00, "description": "Laranja 500ml"}
+    ]
+  },
+  {
+    "categoria": "Sobremesas",
+    "produtos": [
+      {"name": "Pudim", "price": 15.00, "description": "Receita da vovó"},
+      {"name": "Brownie", "price": 18.00, "description": "Com sorvete"}
+    ]
+  },
+  {
+    "categoria": "Hambúrgueres",
+    "produtos": [
+      {"name": "X-Burger", "price": 22.90, "description": "Pão, carne e queijo"},
+      {"name": "X-Salada", "price": 24.90, "description": "Alface, tomate e queijo"},
+      {"name": "X-Bacon", "price": 27.90, "description": "Bacon crocante"},
+      {"name": "X-Tudo", "price": 32.90, "description": "Completo"},
+      {"name": "Cheeseburger Duplo", "price": 29.90, "description": "Duas carnes"},
+      {"name": "Smash Burger", "price": 26.90, "description": "Carne prensada"},
+      {"name": "Burger Vegano", "price": 28.90, "description": "Vegetal"}
+    ]
+  },
+  {
+    "categoria": "Bebidas",
+    "produtos": [
+      {"name": "Coca-Cola", "price": 8.50, "description": "Lata 350ml"},
+      {"name": "Coca-Cola 600ml", "price": 10.00, "description": "Garrafa"},
+      {"name": "Guaraná", "price": 8.00, "description": "Lata"},
+      {"name": "Água", "price": 5.00, "description": "Sem gás"},
+      {"name": "Água com Gás", "price": 6.00, "description": "Com gás"},
+      {"name": "Suco Natural Laranja", "price": 9.50, "description": "Natural"},
+      {"name": "Suco Natural Limão", "price": 9.00, "description": "Refrescante"},
+      {"name": "Chá Gelado", "price": 7.50, "description": "Limão"}
+    ]
+  },
+  {
+    "categoria": "Acompanhamentos",
+    "produtos": [
+      {"name": "Batata Frita Pequena", "price": 12.90, "description": "Porção pequena"},
+      {"name": "Batata Frita Média", "price": 16.90, "description": "Porção média"},
+      {"name": "Batata Frita Grande", "price": 21.90, "description": "Porção grande"},
+      {"name": "Batata com Cheddar", "price": 24.90, "description": "Cheddar"},
+      {"name": "Batata com Bacon", "price": 26.90, "description": "Bacon"},
+      {"name": "Onion Rings", "price": 18.90, "description": "Cebola empanada"},
+      {"name": "Nuggets", "price": 19.90, "description": "Frango"}
+    ]
+  },
+  {
+    "categoria": "Sobremesas",
+    "produtos": [
+      {"name": "Pudim", "price": 12.00, "description": "Caseiro"},
+      {"name": "Brownie", "price": 14.00, "description": "Chocolate"},
+      {"name": "Sorvete", "price": 10.00, "description": "2 bolas"},
+      {"name": "Milkshake Chocolate", "price": 18.90, "description": "Cremoso"},
+      {"name": "Milkshake Morango", "price": 18.90, "description": "Natural"}
+    ]
+  },
+  {
+    "categoria": "Pizzas",
+    "produtos": [
+      {"name": "Pizza Calabresa", "price": 39.90, "description": "Clássica"},
+      {"name": "Pizza Marguerita", "price": 36.90, "description": "Tomate e manjericão"},
+      {"name": "Pizza Frango com Catupiry", "price": 42.90, "description": "Frango"},
+      {"name": "Pizza Portuguesa", "price": 41.90, "description": "Completa"},
+      {"name": "Pizza Quatro Queijos", "price": 44.90, "description": "Queijos"}
+    ]
+  },
+  {
+    "categoria": "Pratos",
+    "produtos": [
+      {"name": "Prato Executivo Frango", "price": 24.90, "description": "Arroz, feijão e frango"},
+      {"name": "Prato Executivo Carne", "price": 27.90, "description": "Carne grelhada"},
+      {"name": "Prato Executivo Peixe", "price": 29.90, "description": "Peixe"}
+    ]
+  },
+  {
+    "categoria": "Lanches",
+    "produtos": [
+      {"name": "Hot Dog Simples", "price": 12.90, "description": "Tradicional"},
+      {"name": "Hot Dog Completo", "price": 16.90, "description": "Completo"},
+      {"name": "Misto Quente", "price": 10.90, "description": "Presunto e queijo"},
+      {"name": "Sanduíche Natural", "price": 14.90, "description": "Saudável"}
+    ]
+  },
+  {
+    "categoria": "Cafés",
+    "produtos": [
+      {"name": "Café Expresso", "price": 5.00, "description": "Forte"},
+      {"name": "Café com Leite", "price": 6.50, "description": "Clássico"},
+      {"name": "Capuccino", "price": 9.90, "description": "Cremoso"}
+    ]
+  },
+  {
+    "categoria": "Saladas",
+    "produtos": [
+      {"name": "Salada Verde", "price": 15.90, "description": "Alface e tomate"},
+      {"name": "Salada Caesar", "price": 19.90, "description": "Com frango"},
+      {"name": "Salada Tropical", "price": 18.90, "description": "Frutas"}
+    ]
+  }
+]

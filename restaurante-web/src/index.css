@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* O resto do seu CSS customizado */
+body {
+  margin: 0;
+  background-color: #0f172a; /* Vamos voltar para o azul escuro padrão */
+  color: white;
+}

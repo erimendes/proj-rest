@@ -1,0 +1,26 @@
+# --- DEPENDÊNCIAS (Node.js) ---
+**/node_modules/
+.pnpm-store/
+
+# --- BACKEND (minha-api-v5) ---
+minha-api-v5/dist/
+minha-api-v5/.env
+minha-api-v5/prisma/*.db
+minha-api-v5/prisma/*.db-journal
+
+# --- FRONTEND (restaurante-web) ---
+restaurante-web/dist/
+restaurante-web/build/
+restaurante-web/.env
+restaurante-web/.env.local
+
+# --- LOGS E ERROS ---
+**/npm-debug.log*
+**/yarn-error.log*
+**/*.log
+
+# --- IDEs E SISTEMA ---
+.vscode/
+.idea/
+.DS_Store
+*.swp

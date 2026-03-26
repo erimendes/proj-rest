@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- MÓDULO DE USUÁRIOS ---
+model User {
+  id          String      @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(USER)
+  posts     Post[]
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role{
+  USER
+  ADMIN
+  MANAGER
+  WAITER
+  CHEF
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  title     String
+  content   String?
+  published Boolean? @default(false)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+}
+
+// --- MÓDULO DE CARDÁPIO ---
+model Category {
+  id       String    @id @default(uuid())
+  name     String
+  products Product[]
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String?
+  price       Decimal     @db.Decimal(10, 2)
+  imageUrl    String?
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+  createdAt   DateTime @default(now())
+}
+
+// --- MÓDULO DE ATENDIMENTO ---
+model Table {
+  id       String      @id @default(uuid())
+  number   Int         @unique
+  status   TableStatus @default(FREE)
+  orders   Order[]
+}
+
+enum TableStatus {
+  FREE
+  OCCUPIED
+  RESERVED
+}
+
+// --- MÓDULO DE PEDIDOS ---
+model Order {
+  id          String      @id @default(uuid())
+  tableId     String
+  table       Table       @relation(fields: [tableId], references: [id])
+  userId      String      // Garçom que abriu o pedido
+  user        User        @relation(fields: [userId], references: [id])
+  status      OrderStatus @default(PENDING)
+  totalPrice  Decimal     @default(0) @db.Decimal(10, 2)
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model OrderItem {
+  id          String  @id @default(uuid())
+  status      String   @default("PENDING")
+  orderId     String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(10, 2)
+  observation String? // Ex: "Sem gelo", "Bem passado"
+
+  createdAt   DateTime @default(now()) 
+
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  CLOSED
+  DELIVERED
+  CANCELED
+}

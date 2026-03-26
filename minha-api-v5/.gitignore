@@ -1,0 +1,26 @@
+# Dependências
+node_modules/
+
+# Build do NestJS
+dist/
+
+# Variáveis de ambiente (IMPORTANTE)
+.env
+.env.test
+.env.production
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma (SQLite local se usar)
+/prisma/*.db
+/prisma/*.db-journal
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
+
+/generated/prisma
+
