@@ -48,6 +48,15 @@ export class AuthService {
     // 🔹 Aqui adicionamos a role no payload
     const payload = { sub: user.id, email: user.email, role: user.role };
 
-    return { access_token: this.jwtService.sign(payload) };
+    // --- ALTERAÇÃO AQUI ---
+    return { 
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name, // Se o seu modelo de usuário tiver 'name'
+        role: user.role
+      }
+    };
   }
 }

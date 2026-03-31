@@ -1,83 +1,97 @@
 #!/bin/bash
+
+# --- CONFIGURAÇÕES ---
 URL="http://localhost:3000"
 JSON_FILE="setup_menu_full.json"
 
-echo "🚀 IMPORTADOR PROFISSIONAL (JSON DIRETO)"
-echo "======================================="
+echo "🚀 IMPORTADOR COMPATÍVEL COM NESTJS (FIELD: imageUrl)"
+echo "======================================================"
 
+# Verifica se o jq está instalado
 if ! command -v jq &> /dev/null; then
-  echo "❌ Instale jq: sudo apt install jq"
+  echo "❌ Erro: Instale o 'jq' (sudo apt install jq)"
   exit 1
 fi
 
-# Função para requisição HTTP
-request() {
-  RESPONSE=$(curl -s -w "\n%{http_code}" "$@")
-  BODY=$(echo "$RESPONSE" | sed '$d')
-  STATUS=$(echo "$RESPONSE" | tail -n1)
-  if [[ "$STATUS" -ge 400 ]]; then
-    echo "❌ HTTP $STATUS"
-    echo "$BODY"
-    exit 1
-  fi
-}
+# Verifica se o arquivo JSON existe
+if [ ! -f "$JSON_FILE" ]; then
+  echo "❌ Erro: Arquivo $JSON_FILE não encontrado!"
+  exit 1
+fi
+
+# Função para registrar logs com data
+log() { echo -e "[$(date +%H:%M:%S)] $1"; }
+
+# --- 1. CARREGAR CACHE ---
+log "📥 Sincronizando dados atuais do banco..."
+ALL_CATEGORIES=$(curl -s "$URL/categories")
+ALL_PRODUCTS=$(curl -s "$URL/products")
 
 declare -A CATEGORY_CACHE
 
-# Criar categoria se não existir
-get_category() {
-  NAME="$1"
-  if [[ -n "${CATEGORY_CACHE[$NAME]}" ]]; then
-    echo "${CATEGORY_CACHE[$NAME]}"
-    return
-  fi
-  RESPONSE=$(curl -s "$URL/categories")
-  ID=$(echo "$RESPONSE" | jq -r ".[] | select(.name==\"$NAME\") | .id")
-  if [[ -z "$ID" || "$ID" == "null" ]]; then
-    echo "📦 Criando categoria: $NAME"
-    ID=$(curl -s -X POST "$URL/categories" -H "Content-Type: application/json" -d "{\"name\":\"$NAME\"}" | jq -r '.id')
-  else
-    echo "♻️ Categoria já existe: $NAME"
-  fi
-  CATEGORY_CACHE[$NAME]=$ID
-  echo "$ID"
-}
+# Mapeia categorias existentes para evitar duplicatas
+while read -r row; do
+  NAME=$(echo "$row" | jq -r '.name')
+  ID=$(echo "$row" | jq -r '.id')
+  CATEGORY_CACHE["$NAME"]="$ID"
+done < <(echo "$ALL_CATEGORIES" | jq -c '.[]')
 
-# Upsert produto
-upsert_product() {
-  NAME="$1"
-  PRICE="$2"
-  DESC="$3"
-  IMAGE="$4"
-  CAT_ID="$5"
-
-  EXIST_ID=$(curl -s "$URL/products" | jq -r ".[] | select(.name==\"$NAME\") | .id")
-  if [[ -n "$EXIST_ID" && "$EXIST_ID" != "null" ]]; then
-    echo "♻️ Atualizando produto: $NAME"
-    curl -s -X PATCH "$URL/products/$EXIST_ID" \
+# --- 2. LOOP DE IMPORTAÇÃO ---
+# Itera sobre o JSON consolidado
+jq -c '.[]' "$JSON_FILE" | while read -r cat_block; do
+  CAT_NAME=$(echo "$cat_block" | jq -r '.categoria')
+  
+  # 2.1 Tratar Categoria
+  CAT_ID="${CATEGORY_CACHE[$CAT_NAME]}"
+  
+  if [[ -z "$CAT_ID" || "$CAT_ID" == "null" ]]; then
+    log "📦 Criando nova categoria: $CAT_NAME"
+    RES_CAT=$(curl -s -X POST "$URL/categories" \
       -H "Content-Type: application/json" \
-      -d "{\"name\":\"$NAME\",\"price\":$PRICE,\"description\":\"$DESC\",\"imageUrl\":\"$IMAGE\",\"categoryId\":\"$CAT_ID\"}"
-  else
-    echo "➕ Criando produto: $NAME"
-    curl -s -X POST "$URL/products" \
-      -H "Content-Type: application/json" \
-      -d "{\"name\":\"$NAME\",\"price\":$PRICE,\"description\":\"$DESC\",\"imageUrl\":\"$IMAGE\",\"categoryId\":\"$CAT_ID\"}"
+      -d "{\"name\":\"$CAT_NAME\"}")
+    CAT_ID=$(echo "$RES_CAT" | jq -r '.id')
+    CATEGORY_CACHE["$CAT_NAME"]="$CAT_ID"
   fi
-}
 
-# Loop no JSON completo
-cat "$JSON_FILE" | jq -c '.[]' | while read categoria; do
-  CAT_NAME=$(echo "$categoria" | jq -r '.categoria')
-  CAT_ID=$(get_category "$CAT_NAME")
-  echo "➡️ Processando produtos de $CAT_NAME"
+  log "➡️ Processando: $CAT_NAME"
 
-  echo "$categoria" | jq -c '.produtos[]' | while read produto; do
-    NAME=$(echo "$produto" | jq -r '.name')
-    PRICE=$(echo "$produto" | jq -r '.price')
-    DESC=$(echo "$produto" | jq -r '.description')
-    IMAGE=$(echo "$produto" | jq -r '.image')
-    upsert_product "$NAME" "$PRICE" "$DESC" "$IMAGE" "$CAT_ID"
+  # 2.2 Tratar Produtos da Categoria
+  echo "$cat_block" | jq -c '.produtos[]' | while read -r prod; do
+    NAME=$(echo "$prod" | jq -r '.name')
+    PRICE=$(echo "$prod" | jq -r '.price')
+    DESC=$(echo "$prod" | jq -r '.description')
+    IMG_URL=$(echo "$prod" | jq -r '.image') # Pega 'image' do JSON
+
+    # MONTA O JSON PARA O NESTJS (Mapeando image -> imageUrl)
+    PAYLOAD=$(jq -n \
+      --arg name "$NAME" \
+      --arg desc "$DESC" \
+      --arg img "$IMG_URL" \
+      --arg cat "$CAT_ID" \
+      --arg price "$PRICE" \
+      '{
+        name: $name,
+        description: $desc,
+        imageUrl: $img,
+        price: ($price | tonumber),
+        categoryId: $cat
+      }')
+
+    # Verifica se o produto já existe pelo nome (Case Insensitive)
+    EXIST_ID=$(echo "$ALL_PRODUCTS" | jq -r ".[] | select(.name | ascii_downcase == (\"$NAME\" | ascii_downcase)) | .id" | head -n 1)
+
+    if [[ -n "$EXIST_ID" && "$EXIST_ID" != "null" ]]; then
+      log "  ♻️ Atualizando: $NAME"
+      curl -s -X PATCH "$URL/products/$EXIST_ID" \
+        -H "Content-Type: application/json" \
+        -d "$PAYLOAD" > /dev/null
+    else
+      log "  ➕ Criando: $NAME"
+      curl -s -X POST "$URL/products" \
+        -H "Content-Type: application/json" \
+        -d "$PAYLOAD" > /dev/null
+    fi
   done
 done
 
-echo "🎉 IMPORTAÇÃO COMPLETA!"
+echo -e "\n🎉 PROCESSO CONCLUÍDO COM SUCESSO!"

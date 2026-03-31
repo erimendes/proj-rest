@@ -24,7 +24,20 @@ export default function TablesView() {
         <button 
           onClick={() => { 
             const num = prompt("Número da nova mesa:"); 
-            if(num) api.post('/tables', { number: Number(num) }).then(() => { alert(`Mesa ${num} criada!`); loadTables(); }); 
+            
+            if (num) { 
+              api.post('/tables', { number: Number(num) })
+                .then(() => { 
+                  // Caso de SUCESSO
+                  alert(`Mesa ${num} criada com sucesso!`); 
+                  loadTables(); 
+                })
+                .catch((error) => {
+                  // Caso de ERRO (Aqui é onde o alerta será gerado se falhar)
+                  console.error("Erro ao criar mesa:", error);
+                  alert(`Erro: Não foi possível criar a mesa ${num}. Verifique se ela já existe ou tente novamente.`);
+                });
+            }
           }} 
           className="bg-emerald-600 hover:bg-emerald-500 px-8 py-4 rounded-2xl font-black flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-900/20"
         >

@@ -12,7 +12,8 @@ export class ProductsService {
       data: {
         name: data.name,
         description: data.description,
-        price: data.price, // O Prisma lida com a conversão para Decimal se for number/string válida
+        price: data.price,
+        imageUrl: data.imageUrl,
         category: {
           connect: { id: data.categoryId },
         },
