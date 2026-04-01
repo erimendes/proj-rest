@@ -15,6 +15,8 @@ npm install -D prisma
 
 npm install prisma@latest @prisma/client@latest
 
+npm install @prisma/adapter-pg pg
+npm install -D @types/pg
 echo "📦 Instalando Swagger"
 npm install @nestjs/swagger swagger-ui-express
 
