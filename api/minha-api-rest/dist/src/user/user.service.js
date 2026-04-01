@@ -53,7 +53,7 @@ let UserService = class UserService {
             data: {
                 ...data,
                 password: hashedPassword,
-                role: data.role ?? undefined,
+                role: data.role || 'USER',
             },
             select: this.userSelect,
         });

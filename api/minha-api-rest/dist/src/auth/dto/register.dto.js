@@ -11,7 +11,8 @@ import { createRequire as _createRequire } from "module";
 const __require = _createRequire(import.meta.url);
 const openapi = __require("@nestjs/swagger");
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional, IsEnum } from 'class-validator';
+import { Role } from '../../generated/prisma/client.js';
 export class RegisterDto {
     username;
     fullName;
@@ -19,8 +20,9 @@ export class RegisterDto {
     password;
     departmentId;
     name;
+    role;
     static _OPENAPI_METADATA_FACTORY() {
-        return { username: { required: true, type: () => String }, fullName: { required: true, type: () => String }, email: { required: true, type: () => String, format: "email" }, password: { required: true, type: () => String, minLength: 8, maxLength: 20 }, departmentId: { required: true, type: () => Number }, name: { required: false, type: () => String, nullable: true } };
+        return { username: { required: true, type: () => String }, fullName: { required: true, type: () => String }, email: { required: true, type: () => String, format: "email" }, password: { required: true, type: () => String, minLength: 8, maxLength: 20 }, departmentId: { required: true, type: () => Number }, name: { required: false, type: () => String, nullable: true }, role: { required: false, type: () => Object } };
     }
 }
 __decorate([
@@ -58,4 +60,10 @@ __decorate([
     IsString(),
     __metadata("design:type", Object)
 ], RegisterDto.prototype, "name", void 0);
+__decorate([
+    ApiProperty({ enum: Role, example: Role.USER }),
+    IsOptional(),
+    IsEnum(Role),
+    __metadata("design:type", String)
+], RegisterDto.prototype, "role", void 0);
 //# sourceMappingURL=register.dto.js.map

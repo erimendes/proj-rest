@@ -22,7 +22,7 @@ export class CreateUserDto {
     name;
     role;
     static _OPENAPI_METADATA_FACTORY() {
-        return { username: { required: true, type: () => String }, fullName: { required: true, type: () => String }, email: { required: true, type: () => String, format: "email" }, password: { required: true, type: () => String }, departmentId: { required: true, type: () => Number }, name: { required: false, type: () => String }, role: { required: false, type: () => Object } };
+        return { username: { required: true, type: () => String }, fullName: { required: true, type: () => String }, email: { required: true, type: () => String, format: "email" }, password: { required: true, type: () => String }, departmentId: { required: true, type: () => Number }, name: { required: false, type: () => String, nullable: true }, role: { required: false, type: () => Object } };
     }
 }
 __decorate([
@@ -57,16 +57,16 @@ __decorate([
     ApiProperty({ example: 'João' }),
     IsString(),
     IsOptional(),
-    __metadata("design:type", String)
+    __metadata("design:type", Object)
 ], CreateUserDto.prototype, "name", void 0);
 __decorate([
     ApiPropertyOptional({
         enum: Role,
-        example: Role.USER,
+        example: 'USER',
         description: 'Nível de permissão do usuário'
     }),
-    IsEnum(Role),
     IsOptional(),
+    IsEnum(Role),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "role", void 0);
 //# sourceMappingURL=create-user.dto.js.map

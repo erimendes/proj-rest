@@ -5,9 +5,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 import { Module, forwardRef } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service.js';
 import { AuthController } from './auth.controller.js';
-import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { UserModule } from '../user/user.module.js';
 let AuthModule = class AuthModule {
@@ -16,14 +17,18 @@ AuthModule = __decorate([
     Module({
         imports: [
             forwardRef(() => UserModule),
-            JwtModule.register({
-                secret: process.env.JWT_SECRET,
-                signOptions: { expiresIn: '1h' },
+            JwtModule.registerAsync({
+                imports: [ConfigModule],
+                inject: [ConfigService],
+                useFactory: async (configService) => ({
+                    secret: configService.get('JWT_SECRET'),
+                    signOptions: { expiresIn: '1h' },
+                }),
             }),
         ],
         controllers: [AuthController],
         providers: [AuthService, JwtStrategy],
-        exports: [AuthService]
+        exports: [AuthService],
     })
 ], AuthModule);
 export { AuthModule };

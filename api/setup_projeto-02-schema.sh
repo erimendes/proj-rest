@@ -183,7 +183,8 @@ export class UserService {
       data: {
         ...data,
         password: hashedPassword,
-        role: data.role ?? undefined,
+        // Garante que o role seja o enviado ou o padrão 'USER'
+        role: data.role || 'USER', // Defina um padrão aqui caso não venha no DTO
       },
       select: this.userSelect,
     });
@@ -226,16 +227,15 @@ export class CreateUserDto {
   @ApiProperty({ example: 'João' })
   @IsString()
   @IsOptional()
-  name?: string;
+  name?: string | null; // Aceita null para bater com o Prisma
 
-  // ESTA É A PARTE QUE CORRIGE O SWAGGER
   @ApiPropertyOptional({ 
     enum: Role, 
-    example: Role.USER,
+    example: 'USER',
     description: 'Nível de permissão do usuário' 
   })
-  @IsEnum(Role)
   @IsOptional()
+  @IsEnum(Role) // Valida se o que foi enviado existe no seu banco
   role?: Role;
 }
 EOF
@@ -285,25 +285,33 @@ EOF
 
 echo "🔧 Ajustando AuthModule para incluir o JwtStrategy..."
 cat << 'EOF' > src/auth/auth.module.ts
+// src/auth/auth.module.ts
 import { Module, forwardRef } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from './auth.service.js';
 import { AuthController } from './auth.controller.js';
-import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { UserModule } from '../user/user.module.js';
 
 @Module({
   imports: [
-    forwardRef(() => UserModule), // ✅ Mantenha apenas este
-    // UserModule, <--- ❌ REMOVA ESTA LINHA, ela está anulando o forwardRef
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '1h' },
+    // Use forwardRef para evitar dependência circular com UserModule
+    forwardRef(() => UserModule),
+    
+    // Configuração assíncrona para GARANTIR que o JWT_SECRET seja lido
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1h' },
+      }),
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService] // Dica: Exportar se o UserModule precisar do AuthService
+  controllers: [AuthController], // Essencial para as rotas funcionarem
+  providers: [AuthService, JwtStrategy], // Essencial para a lógica e segurança
+  exports: [AuthService], // Exportar se outros módulos precisarem
 })
 export class AuthModule {}
 EOF
@@ -348,7 +356,8 @@ echo "🔧 Criando RegisterDto..."
 cat << 'EOF' > src/auth/dto/register.dto.ts
 // src/auth/dto/register.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional, IsEnum } from 'class-validator';
+import { Role } from '../../generated/prisma/client.js'; // Importe o Role do Prisma (ajuste o caminho conforme sua estrutura)
 
 export class RegisterDto {
   @ApiProperty({ example: 'joao.silva', description: 'Nome de usuário único' })
@@ -379,6 +388,11 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   name?: string | null; // Aceita null para bater com o Prisma
+
+  @ApiProperty({ enum: Role, example: Role.USER })
+  @IsOptional()
+  @IsEnum(Role) // Valida se a string enviada bate com o Enum
+  role?: Role;  // Mude de string para Role
 }
 EOF
 
@@ -583,9 +597,69 @@ export default defineConfig({
 });
 EOF
 
+echo "🔧 Ajustando AuthService para refletir o novo schema e usar o Prisma Client..."
+cat << 'EOF' > src/auth/auth.service.ts
+// src/auth/auth.service.ts
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { UserService } from '../user/user.service.js';
+import { JwtService } from '@nestjs/jwt';
+import * as argon2 from 'argon2';
+import { Role } from 'src/generated/prisma/enums.js';
+import { RegisterDto } from './dto/register.dto.js';
+import { CreateUserDto } from '../user/dto/create-user.dto.js';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private userService: UserService,
+    private jwtService: JwtService,
+  ) {}
+
+  async register(data: RegisterDto) {
+    try {
+      // Tratando o campo 'name' para remover o 'null' caso exista
+      const userData: CreateUserDto = {
+        ...data,
+        name: data.name ?? undefined, // Se for null ou undefined, vira undefined
+      };
+      const user = await this.userService.create(userData);
+      return await this.generateToken(user);
+    } catch (error) {
+      console.error("ERRO NO REGISTER:", error); // Isso vai mostrar o erro real no seu terminal do VS Code
+      throw error; 
+    }
+  }
+
+  async login(data) {
+    const user = await this.userService.findByEmail(data.email);
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    const valid = await argon2.verify(user.password, data.password);
+    if (!valid) throw new UnauthorizedException('Invalid credentials');
+
+    // Adicionamos o await aqui também
+    return await this.generateToken(user);
+  }
+
+  // Mudamos para async para usar o signAsync
+  private async generateToken(user: any) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    return {
+      // signAsync é a versão moderna e não-bloqueante
+      access_token: await this.jwtService.signAsync(payload),
+    };
+  }
+}
+EOF
+
 echo "🔧 Gerando Prisma Client..."
 npx prisma generate
 echo "🔧 Rodando seed para garantir que o departamento de TI exista...  "
-echo "npx prisma db seed"
+echo "npx prisma db seed ou npx tsx prisma/seed.ts ou npm install -D tsx"
 
 echo "✅ Prisma schema configurado e client gerado com sucesso."

@@ -1,6 +1,7 @@
 // src/auth/dto/register.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional, IsEnum } from 'class-validator';
+import { Role } from '../../generated/prisma/client.js'; // Importe o Role do Prisma (ajuste o caminho conforme sua estrutura)
 
 export class RegisterDto {
   @ApiProperty({ example: 'joao.silva', description: 'Nome de usuário único' })
@@ -31,4 +32,9 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   name?: string | null; // Aceita null para bater com o Prisma
+
+  @ApiProperty({ enum: Role, example: Role.USER })
+  @IsOptional()
+  @IsEnum(Role) // Valida se a string enviada bate com o Enum
+  role?: Role;  // Mude de string para Role
 }

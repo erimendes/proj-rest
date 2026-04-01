@@ -5,6 +5,6 @@ export declare class CreateUserDto {
     email: string;
     password: string;
     departmentId: number;
-    name?: string;
+    name?: string | null;
     role?: Role;
 }

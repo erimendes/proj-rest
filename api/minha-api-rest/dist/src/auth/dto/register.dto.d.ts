@@ -1,3 +1,4 @@
+import { Role } from '../../generated/prisma/client.js';
 export declare class RegisterDto {
     username: string;
     fullName: string;
@@ -5,4 +6,5 @@ export declare class RegisterDto {
     password: string;
     departmentId: number;
     name?: string | null;
+    role?: Role;
 }

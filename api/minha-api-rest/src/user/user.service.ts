@@ -56,7 +56,8 @@ export class UserService {
       data: {
         ...data,
         password: hashedPassword,
-        role: data.role ?? undefined,
+        // Garante que o role seja o enviado ou o padrão 'USER'
+        role: data.role || 'USER', // Defina um padrão aqui caso não venha no DTO
       },
       select: this.userSelect,
     });

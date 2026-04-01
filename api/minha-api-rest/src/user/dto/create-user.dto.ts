@@ -31,15 +31,14 @@ export class CreateUserDto {
   @ApiProperty({ example: 'João' })
   @IsString()
   @IsOptional()
-  name?: string;
+  name?: string | null; // Aceita null para bater com o Prisma
 
-  // ESTA É A PARTE QUE CORRIGE O SWAGGER
   @ApiPropertyOptional({ 
     enum: Role, 
-    example: Role.USER,
+    example: 'USER',
     description: 'Nível de permissão do usuário' 
   })
-  @IsEnum(Role)
   @IsOptional()
+  @IsEnum(Role) // Valida se o que foi enviado existe no seu banco
   role?: Role;
 }
