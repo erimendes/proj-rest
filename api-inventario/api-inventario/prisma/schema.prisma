@@ -1,0 +1,188 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- ENUMS PROFISSIONAIS ---
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ComputerType {
+  DESKTOP
+  NOTEBOOK
+  SERVER
+  VM
+  OTHER
+}
+
+enum ComputerRole {
+  USER   // Máquina de uso pessoal/estação de trabalho
+  SERVER // Máquina que provê serviços (AD, Web, DB)
+}
+
+// --- USUÁRIOS ---
+model User {
+  id           Int         @id @default(autoincrement())
+  username     String      @unique
+  fullName     String      @map("full_name")
+  email        String      @unique
+  password     String
+  role         Role        @default(USER)
+
+  department   Department? @relation(fields: [departmentId], references: [id])
+  departmentId Int?        @map("department_id")
+
+  assignments  Assignment[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+// --- GESTÃO DE MOVIMENTAÇÃO ---
+model Assignment {
+  id         Int       @id @default(autoincrement())
+  computer   Computer  @relation(fields: [computerId], references: [id])
+  computerId Int       @map("computer_id")
+  user       User      @relation(fields: [userId], references: [id])
+  userId     Int       @map("user_id")
+  
+  assignedAt DateTime  @default(now()) @map("assigned_at")
+  returnedAt DateTime? @map("returned_at")
+
+  @@map("assignments")
+}
+
+// --- TABELAS AUXILIARES ---
+model Status {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  computers Computer[]
+
+  @@map("statuses")
+}
+
+model DeviceModel {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  computers Computer[]
+
+  @@map("device_models")
+}
+
+model Department {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+
+  @@map("departments")
+}
+
+model Location {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  computers Computer[]
+
+  @@map("locations")
+}
+
+// --- ENTIDADE PRINCIPAL: COMPUTER ---
+model Computer {
+  id             Int      @id @default(autoincrement())
+  glpiId         Int?      @unique
+  hostname       String
+  hostFisico     String?  // Máquina física associada
+  nameHaperv     String?  // Nome Hyper-V / VM
+  mainIp         String   @unique @db.VarChar(45)
+
+  alternateUser  String?
+  user           String?  // Usuário logado via inventário
+
+  type           ComputerType @default(DESKTOP)
+  role           ComputerRole @default(USER)
+
+  manufacturer   String?
+  modelName      String?
+  serial         String?
+
+  osName         String?
+  osVersion      String?
+  osArch         String?
+
+  cpu            String?
+  ram            String?
+  hd             String?
+
+  // Relacionamentos
+  status         Status?      @relation(fields: [statusId], references: [id])
+  statusId       Int?
+
+  location       Location?    @relation(fields: [locationId], references: [id])
+  locationId     Int?
+
+  deviceModel    DeviceModel? @relation(fields: [deviceModelId], references: [id])
+  deviceModelId  Int?
+
+  assignments    Assignment[]
+  networkInterfaces NetworkInterface[]
+  volumes           Volume[]
+  softwares         SoftwareOnComputer[]
+
+  lastSync       DateTime @default(now())
+
+  @@map("computers")
+}
+
+// --- DETALHAMENTO TÉCNICO ---
+model NetworkInterface {
+  id         Int      @id @default(autoincrement())
+  glpiId     Int?
+  name       String?
+  macAddress String?
+  ipAddress  String?  @db.VarChar(45)
+
+  computer   Computer @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  computerId Int
+
+  @@map("network_interfaces")
+}
+
+model Volume {
+  id          Int      @id @default(autoincrement())
+  glpiId      Int?
+  mountPoint  String?
+  capacityGb  Float
+
+  computer    Computer @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  computerId  Int
+
+  @@map("volumes")
+}
+
+model Software {
+  id        Int      @id @default(autoincrement())
+  glpiId    Int      @unique
+  name      String
+  version   String?
+  publisher String?
+
+  computers SoftwareOnComputer[]
+
+  @@map("softwares")
+}
+
+model SoftwareOnComputer {
+  computer   Computer @relation(fields: [computerId], references: [id], onDelete: Cascade)
+  computerId Int
+
+  software   Software @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+  softwareId Int
+
+  @@id([computerId, softwareId])
+  @@map("software_on_computers")
+}

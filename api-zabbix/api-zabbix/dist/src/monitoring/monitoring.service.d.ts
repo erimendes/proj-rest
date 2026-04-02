@@ -5,16 +5,16 @@ export declare class MonitoringService {
     constructor(prisma: PrismaService);
     handleWebhook(data: ZabbixWebhookDto): Promise<{
         id: number;
+        status: string;
+        createdAt: Date;
+        message: string | null;
         eventid: string | null;
         host: string;
         ipAddress: string | null;
         triggerName: string;
         priority: import("../generated/prisma/enums.js").NotificationPriority;
-        status: string;
-        message: string | null;
         acknowledged: boolean;
         assetHostname: string | null;
-        createdAt: Date;
         resolvedAt: Date | null;
     }>;
 }

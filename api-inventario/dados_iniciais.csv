@@ -1,0 +1,4 @@
+import { IsNotEmpty } from "class-validator"
+hostname,hostfisico,namehaperv,fabricante,tipo,modelo,sistema operacional,mainIp,cpu,ram,hd
+SRV-PROD-01,SRV-PROD-01,,IBM,Server,BladeCenter HS22,Windows Server 2019,192.168.15.50,16 nucleos,64GB,4TB
+VM01,SRV-PROD-01,VM01,Microsoft,VM,Virtual Machine,Windows Server 2022,192.168.15.51,16 nucleos,64GB,200GB

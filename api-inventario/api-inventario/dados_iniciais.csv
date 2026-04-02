@@ -1,0 +1,2 @@
+hostname,hostfisico,namehaperv,fabricante,tipo  ,modelo          ,sistema operacional,mainIp,cpu,ram,hd
+WCFSIM05,SRV-PROD-01,         ,IBM       ,Server,BladeCenter HS22,Windows Server 2019,10.10.30.65,16 nucleos,64GB,4TB
