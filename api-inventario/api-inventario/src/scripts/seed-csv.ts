@@ -33,7 +33,18 @@ async function seedFromCSV() {
           // Garantir valores obrigatórios
           const mainIp = row.mainIp?.trim();
           const hostname = row.hostname?.trim() || mainIp;
-          const hostFisico = row.hostFisico?.trim() || hostname;
+          // PEGA EXATAMENTE O QUE ESTÁ NO CSV
+          // .trim() remove espaços, mas se o resultado for vazio "", 
+          // ele manterá vazio ou você pode definir um padrão.
+          let hostFisico = row.hostfisico?.trim(); 
+
+          // Lógica para garantir que não fique nulo, 
+          // mas respeite a hierarquia do seu CSV:
+          if (!hostFisico || hostFisico === "") {
+              // Se for um servidor físico (não tem hostFisico no CSV), 
+              // ele é o seu próprio host.
+              hostFisico = hostname; 
+          }
           const nameHaperv = row.nameHaperv?.trim() || hostname;
 
           if (!mainIp) {

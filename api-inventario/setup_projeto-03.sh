@@ -213,6 +213,7 @@ mkdir -p src/scripts
 echo "🔧 Criando glpi-sync.ts para sincronizar o banco de dados usando o Prisma Client e o adapter do PostgreSQL..."
 cat << 'EOF' > src/scripts/glpi-sync.ts
 // src/scripts/glpi-sync.ts
+import "dotenv/config";
 import pg from "pg";
 const { Pool } = pg;
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -221,6 +222,7 @@ import csv from 'csv-parser';
 import axios from 'axios';
 import { PrismaClient, ComputerType, ComputerRole } from '../generated/prisma/client.js';
 
+// Configurações de Ambiente
 const connectionString = `${process.env.DATABASE_URL}`;
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
@@ -231,7 +233,10 @@ const APP_TOKEN = process.env.GLPI_APP_TOKEN!;
 
 async function getCsvComputers() {
   const results: any[] = [];
-  if (!fs.existsSync('dados_iniciais.csv')) return results;
+  if (!fs.existsSync('dados_iniciais.csv')) {
+    console.error('❌ Arquivo dados_iniciais.csv não encontrado na raiz!');
+    return results;
+  }
 
   return new Promise<any[]>((resolve) => {
     fs.createReadStream('dados_iniciais.csv')
@@ -239,106 +244,137 @@ async function getCsvComputers() {
       .on('data', (data) => {
         if (data.hostname?.trim() || data.mainIp?.trim()) results.push(data);
       })
-      .on('end', () => resolve(results));
+      .on('end', () => {
+        console.log(`\n📄 CSV carregado: ${results.length} registros encontrados.`);
+        resolve(results);
+      });
   });
 }
 
 async function syncGlpiFromCsv() {
   const csvComputers = await getCsvComputers();
-  if (!csvComputers.length) {
-    console.log('❌ Nenhum computador válido no CSV.');
-    return;
-  }
+  if (!csvComputers.length) return;
 
-  // Inicia sessão GLPI
-  const sessionRes = await axios.get(`${GLPI_URL}/initSession`, {
-    headers: { 'Authorization': `user_token ${USER_TOKEN}`, 'App-Token': APP_TOKEN }
-  });
-  const sessionToken = sessionRes.data.session_token;
+  try {
+    console.log('🔑 Iniciando sessão no GLPI...');
+    const sessionRes = await axios.get(`${GLPI_URL}/initSession`, {
+      headers: { 'Authorization': `user_token ${USER_TOKEN}`, 'App-Token': APP_TOKEN }
+    });
+    const sessionToken = sessionRes.data.session_token;
+    console.log('✅ Sessão GLPI estabelecida.');
 
-  // Buscar computadores do GLPI
-  const glpiRes = await axios.get(`${GLPI_URL}/Computer`, {
-    params: { expand_dropdowns: true, get_full_details: true, range: '0-1000' },
-    headers: { 'Session-Token': sessionToken, 'App-Token': APP_TOKEN }
-  });
-  const glpiComputers = glpiRes.data;
+    // 1. Buscar TODOS os computadores do GLPI (com detalhes)
+    console.log('🔍 Buscando inventário completo do GLPI...');
+    const glpiRes = await axios.get(`${GLPI_URL}/Computer`, {
+      params: { expand_dropdowns: true, get_full_details: true, range: '0-1000' },
+      headers: { 'Session-Token': sessionToken, 'App-Token': APP_TOKEN }
+    });
+    const glpiComputers = glpiRes.data;
+    console.log(`📦 Dados brutos recebidos do GLPI: ${glpiComputers.length} itens.`);
 
-  for (const csvRow of csvComputers) {
-    const filterHostname = csvRow.hostname?.trim();
-    const filterIp = csvRow.mainIp?.trim();
-
-    const glpiComp = glpiComputers.find((c: any) =>
-      (filterHostname && c.name === filterHostname) ||
-      (filterIp && c._networks?.some((n: any) => n.ip === filterIp))
-    );
-
-    if (!glpiComp) {
-      console.log(`⚠️ Computador não encontrado no GLPI: ${filterHostname || filterIp}`);
-      continue;
+    // 2. Buscar Relações de Virtualização (Para resolver o hostFisico)
+    console.log('🔗 Mapeando topologia de máquinas virtuais...');
+    const vmRes = await axios.get(`${GLPI_URL}/Computer_VirtualMachine`, {
+      headers: { 'Session-Token': sessionToken, 'App-Token': APP_TOKEN }
+    });
+    
+    // Criamos um mapa [ID_DA_VM -> ID_DO_HOST_FISICO]
+    const vmMap = new Map();
+    if (Array.isArray(vmRes.data)) {
+      vmRes.data.forEach((vm: any) => vmMap.set(vm.items_id, vm.items_id_tech));
     }
 
-    // Determina tipo e role
-    let type: ComputerType = ComputerType.DESKTOP;
-    let role: ComputerRole = ComputerRole.USER;
+    // 3. Processar cada linha do CSV cruzando com GLPI
+    for (const csvRow of csvComputers) {
+      const filterHostname = csvRow.hostname?.trim();
+      const filterIp = csvRow.mainIp?.trim();
 
-    if (
-      (typeof glpiComp.operatingsystems_id === 'string' && glpiComp.operatingsystems_id.toLowerCase().includes('server')) ||
-      (glpiComp.name?.toLowerCase().includes('srv'))
-    ) {
-      type = ComputerType.SERVER;
-      role = ComputerRole.SERVER;
-    }
+      // Busca o objeto correspondente no GLPI
+      const glpiComp = glpiComputers.find((c: any) =>
+        (filterHostname && c.name === filterHostname) ||
+        (filterIp && c._networks?.some((n: any) => n.ip === filterIp))
+      );
 
-    const mainIpSafe = filterIp || glpiComp._networks?.[0]?.ip;
-    if (!mainIpSafe) {
-      console.log(`⚠️ Computador ${glpiComp.name} não tem IP, pulando...`);
-      continue;
-    }
-
-    await prisma.computer.upsert({
-      where: { mainIp: mainIpSafe },
-      update: {
-        hostname: glpiComp.name,
-        alternateUser: glpiComp.contact,
-        user: glpiComp.users_id_tech || '',
-        manufacturer: glpiComp.manufacturers_id?.toString() || 'Unknown',
-        modelName: glpiComp.computermodels_id?.toString() || 'Generic',
-        osName: glpiComp.operatingsystems_id?.toString(),
-        type,
-        role,
-        lastSync: new Date()
-      },
-      create: {
-        glpiId: glpiComp.id,
-        hostname: glpiComp.name,
-        mainIp: mainIpSafe,
-        alternateUser: glpiComp.contact,
-        manufacturer: glpiComp.manufacturers_id?.toString() || 'Unknown',
-        modelName: glpiComp.computermodels_id?.toString() || 'Generic',
-        serial: glpiComp.serial,
-        osName: glpiComp.operatingsystems_id?.toString(),
-        type,
-        role,
-        networkInterfaces: {
-          create: glpiComp._networks?.map((n: any) => ({
-            name: n.name,
-            ipAddress: n.ip,
-            macAddress: n.mac
-          })) || []
-        }
+      if (!glpiComp) {
+        console.warn(`⚠️ Pulando: ${filterHostname || filterIp} não encontrado no GLPI.`);
+        continue;
       }
+
+      console.log(`\n--- Processando: ${glpiComp.name} ---`);
+      
+      // LOG DOS DADOS DO PACOTE GLPI (O que você pediu para ver)
+      console.log(`   - ID GLPI: ${glpiComp.id}`);
+      console.log(`   - SO: ${glpiComp.operatingsystems_id}`);
+      console.log(`   - Modelo: ${glpiComp.computermodels_id}`);
+      console.log(`   - Redes:`, glpiComp._networks?.map((n: any) => n.ip).join(', ') || 'N/A');
+
+      // Determina Tipo e Role
+      let type: ComputerType = ComputerType.DESKTOP;
+      let role: ComputerRole = ComputerRole.USER;
+      let hostFisico = glpiComp.name;
+
+      // Lógica de Identificação de Servidor/VM
+      const isVM = vmMap.has(glpiComp.id);
+      const isServerSO = String(glpiComp.operatingsystems_id).toLowerCase().includes('server');
+      const isServerName = glpiComp.name?.toLowerCase().includes('srv');
+
+      if (isVM) {
+        type = ComputerType.VM;
+        role = ComputerRole.SERVER;
+        // Busca o nome do Host Físico no array original usando o ID do mapa
+        const parentId = vmMap.get(glpiComp.id);
+        const parentComp = glpiComputers.find((c: any) => c.id === parentId);
+        hostFisico = parentComp?.name || "Desconhecido";
+        console.log(`   - 🖥️ Identificado como VM. Host Físico: ${hostFisico}`);
+      } else if (isServerSO || isServerName) {
+        type = ComputerType.SERVER;
+        role = ComputerRole.SERVER;
+        console.log(`   - 🛠️ Identificado como Servidor Físico.`);
+      }
+
+      const mainIpSafe = filterIp || glpiComp._networks?.[0]?.ip;
+
+      // UPSERT NO PRISMA
+      await prisma.computer.upsert({
+        where: { mainIp: mainIpSafe },
+        update: {
+          hostname: glpiComp.name,
+          hostFisico: hostFisico,
+          manufacturer: String(glpiComp.manufacturers_id || 'Unknown'),
+          modelName: String(glpiComp.computermodels_id || 'Generic'),
+          osName: String(glpiComp.operatingsystems_id || 'N/A'),
+          type,
+          role,
+          lastSync: new Date()
+        },
+        create: {
+          glpiId: glpiComp.id,
+          hostname: glpiComp.name,
+          mainIp: mainIpSafe,
+          hostFisico: hostFisico,
+          manufacturer: String(glpiComp.manufacturers_id || 'Unknown'),
+          modelName: String(glpiComp.computermodels_id || 'Generic'),
+          serial: glpiComp.serial || 'N/A',
+          osName: String(glpiComp.operatingsystems_id || 'N/A'),
+          type,
+          role
+        }
+      });
+    }
+
+    // Finaliza sessão GLPI
+    console.log('\n🚪 Encerrando sessão GLPI...');
+    await axios.get(`${GLPI_URL}/killSession`, {
+      headers: { 'Session-Token': sessionToken, 'App-Token': APP_TOKEN }
     });
 
-    console.log(`✅ Sincronizado: ${glpiComp.name}`);
+  } catch (error: any) {
+    console.error('❌ Erro durante a sincronização:', error.response?.data || error.message);
+  } finally {
+    await prisma.$disconnect();
+    await pool.end();
+    console.log('🏁 Processo finalizado.');
   }
-
-  // Finaliza sessão GLPI
-  await axios.get(`${GLPI_URL}/killSession`, {
-    headers: { 'Session-Token': sessionToken, 'App-Token': APP_TOKEN }
-  });
-
-  await prisma.$disconnect();
-  console.log('🎉 Sincronização finalizada!');
 }
 
 syncGlpiFromCsv();
@@ -381,7 +417,18 @@ async function seedFromCSV() {
           // Garantir valores obrigatórios
           const mainIp = row.mainIp?.trim();
           const hostname = row.hostname?.trim() || mainIp;
-          const hostFisico = row.hostFisico?.trim() || hostname;
+          // PEGA EXATAMENTE O QUE ESTÁ NO CSV
+          // .trim() remove espaços, mas se o resultado for vazio "", 
+          // ele manterá vazio ou você pode definir um padrão.
+          let hostFisico = row.hostfisico?.trim(); 
+
+          // Lógica para garantir que não fique nulo, 
+          // mas respeite a hierarquia do seu CSV:
+          if (!hostFisico || hostFisico === "") {
+              // Se for um servidor físico (não tem hostFisico no CSV), 
+              // ele é o seu próprio host.
+              hostFisico = hostname; 
+          }
           const nameHaperv = row.nameHaperv?.trim() || hostname;
 
           if (!mainIp) {
@@ -402,14 +449,14 @@ async function seedFromCSV() {
 
           // Upsert seguro
           await prisma.computer.upsert({
-            where: { mainIp },
+            where: { mainIp: row.mainIp },
             update: {
-              hostname,
-              hostFisico,
-              nameHaperv,
+              hostname: row.hostname,
+              hostFisico: hostFisico,
+              nameHaperv: nameHaperv,
               manufacturer: row.fabricante || 'Unknown',
               modelName: row.modelo || 'Unknown',
-              osName: row.sistema_operacional || 'Unknown',
+              osName: row['sistema operacional'] || 'Unknown',
               cpu: row.cpu || 'Unknown',
               ram: row.ram || 'Unknown',
               hd: row.hd || 'Unknown',
@@ -418,13 +465,13 @@ async function seedFromCSV() {
               lastSync: new Date()
             },
             create: {
-              mainIp,
-              hostname,
-              hostFisico,
-              nameHaperv,
-              manufacturer: row.fabricante || 'Unknown',
+              mainIp: row.mainIp,
+              hostname: row.hostname,
+              hostFisico: hostFisico,
+              nameHaperv: nameHaperv,
+              manufacturer: row.fabricante || 'Unknown', 
               modelName: row.modelo || 'Unknown',
-              osName: row.sistema_operacional || 'Unknown',
+              osName: row['sistema operacional'] || 'Unknown',
               cpu: row.cpu || 'Unknown',
               ram: row.ram || 'Unknown',
               hd: row.hd || 'Unknown',
@@ -453,8 +500,8 @@ cat << 'EOF' > .env
 DATABASE_URL="postgresql://admin:123456789@localhost:5432/inventario_db?schema=public"
 JWT_SECRET="super-secret-app-token"
 GLPI_URL=http://192.168.15.20/apirest.php
-GLPI_USER_TOKEN=SEU_USER_TOKEN_AQUI
 GLPI_APP_TOKEN="super-secret-app-token"
+GLPI_USER_TOKEN="seu_token_de_usuario_glpi"
 EOF
 
 # Cores para o terminal

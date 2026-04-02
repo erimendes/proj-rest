@@ -24,7 +24,10 @@ async function seedFromCSV() {
             try {
                 const mainIp = row.mainIp?.trim();
                 const hostname = row.hostname?.trim() || mainIp;
-                const hostFisico = row.hostFisico?.trim() || hostname;
+                let hostFisico = row.hostfisico?.trim();
+                if (!hostFisico || hostFisico === "") {
+                    hostFisico = hostname;
+                }
                 const nameHaperv = row.nameHaperv?.trim() || hostname;
                 if (!mainIp) {
                     console.warn(`⚠️ Pulando registro sem mainIp: ${JSON.stringify(row)}`);
