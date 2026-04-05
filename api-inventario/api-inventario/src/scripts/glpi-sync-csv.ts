@@ -6,8 +6,9 @@ import fs from 'fs';
 import csv from 'csv-parser';
 import axios from 'axios';
 // Importação corrigida dos Enums para evitar erro de tipagem
-import { PrismaClient, ComputerType, ComputerRole } from '../src/generated/prisma/index.js';
+import { PrismaClient, ComputerType, ComputerRole } from '../generated/prisma/client.js';
 
+// Configurações de Ambiente
 const connectionString = process.env.DATABASE_URL;
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
