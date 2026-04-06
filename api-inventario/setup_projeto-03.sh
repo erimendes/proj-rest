@@ -687,6 +687,57 @@ echo -e "${BLUE}==== 🔧 INICIANDO DEPLOY AUTOMATIZADO ==== ${NC}"
 echo -e "${YELLOW}⚙️  Gerando Prisma Client...${NC}"
 npx prisma generate
 
+# 1. Define o arquivo
+FILE="tsconfig.json"
+
+echo "Step 1: Sobrescrevendo $FILE com a configuração estável..."
+
+cat <<EOF > $FILE
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "paths": {
+      "@/*": ["./src/*"],
+      "api/*": ["./src/api/*"]
+    },
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false
+  }
+}
+EOF
+
+echo "Step 2: Limpando caches de compilação antigos..."
+# Remove o arquivo de cache do modo incremental (se existir)
+rm -f tsconfig.tsbuildinfo
+# Remove a pasta dist para evitar conflitos de tipos antigos
+rm -rf ./dist
+
+echo "--------------------------------------------------------"
+echo "✅ Script finalizado!"
+echo "⚠️  IMPORTANTE: O VS Code ainda pode manter o erro em cache."
+echo "Para resolver 100%, você PRECISA fazer o comando manual:"
+echo "1. No VS Code, aperte: Ctrl + Shift + P"
+echo "2. Digite: TypeScript: Restart TS Server"
+echo "3. Aperte: Enter"
+echo "--------------------------------------------------------"
+
 # # 3. Carga Inicial do CSV (Dono dos IPs)
 # if [ -f "dados_iniciais.csv" ]; then
 #     echo -e "${GREEN}📥 Populando banco via CSV (Semente de IPs)...${NC}"
