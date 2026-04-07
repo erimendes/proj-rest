@@ -6,127 +6,107 @@ import fs from 'fs';
 import csv from 'csv-parser';
 import axios from 'axios';
 import { PrismaClient, ComputerType, ComputerRole } from '../generated/prisma/client.js';
-const connectionString = process.env.DATABASE_URL;
-const pool = new Pool({ connectionString });
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
-const GLPI_URL = process.env.GLPI_URL;
+const GLPI_URL = process.env.GLPI_URL.replace(/\/$/, "");
 const USER_TOKEN = process.env.GLPI_USER_TOKEN;
 const APP_TOKEN = process.env.GLPI_APP_TOKEN;
 async function getServerCsv() {
     const results = [];
-    if (!fs.existsSync('server.csv')) {
-        console.error('❌ Arquivo server.csv não encontrado!');
-        return results;
+    const csvPath = "server.csv";
+    if (!fs.existsSync(csvPath)) {
+        console.error("❌ server.csv não encontrado na raiz!");
+        return [];
     }
-    return new Promise((resolve) => {
-        fs.createReadStream('server.csv')
+    return new Promise((resolve, reject) => {
+        fs.createReadStream(csvPath)
             .pipe(csv())
-            .on('data', (data) => {
-            if (data.hostname?.trim() || data.mainIp?.trim()) {
-                results.push({
-                    hostname: data.hostname?.trim(),
-                    mainIp: data.mainIp?.trim()
-                });
+            .on("data", (data) => {
+            const hostname = data.name?.trim();
+            const glpiId = data.id?.trim();
+            if (hostname) {
+                results.push({ hostname, glpiId });
             }
         })
-            .on('end', () => {
-            console.log(`\n📄 Filtro carregado: ${results.length} servidores para processar.`);
-            resolve(results);
-        });
+            .on("end", () => resolve(results))
+            .on("error", reject);
     });
 }
-async function getHardwareSpecs(glpiId, headers) {
-    try {
-        const [cpuRes, ramRes, driveRes] = await Promise.all([
-            axios.get(`${GLPI_URL}/Computer/${glpiId}/Item_DeviceProcessor`, { headers }),
-            axios.get(`${GLPI_URL}/Computer/${glpiId}/Item_DeviceMemory`, { headers }),
-            axios.get(`${GLPI_URL}/Computer/${glpiId}/Item_DeviceDrive`, { headers })
-        ]);
-        const cpu = cpuRes.data?.[0]?.designation || "Unknown CPU";
-        const totalRamMb = ramRes.data?.reduce((acc, cur) => acc + (parseInt(cur.size) || 0), 0) || 0;
-        const ram = totalRamMb > 0 ? `${(totalRamMb / 1024).toFixed(1)} GB` : "Unknown RAM";
-        const drives = driveRes.data?.map((d) => ({
-            mountPoint: d.designation || 'Disk',
-            capacityGb: Math.round((parseInt(d.capacity) || 0) / 1024)
-        })) || [];
-        const totalHd = drives.reduce((acc, cur) => acc + cur.capacityGb, 0);
-        return { cpu, ram, hd: `${totalHd} GB`, drives };
-    }
-    catch (e) {
-        return { cpu: "N/A", ram: "N/A", hd: "N/A", drives: [] };
-    }
+function parseVolumes(rawVolumes) {
+    return rawVolumes
+        .map((v) => {
+        const rawSize = Number(v.size || v.totalsize || 0);
+        let sizeGB = rawSize > 1_000_000 ? rawSize / 1024 / 1024 / 1024 : 0;
+        if (rawSize > 0 && sizeGB === 0)
+            sizeGB = rawSize / 1024 / 1024;
+        return {
+            mountPoint: String(v.mountpoint || v.name || "Disco"),
+            capacityGb: Number(sizeGB.toFixed(2)),
+            glpiId: v.id ? Number(v.id) : null
+        };
+    })
+        .filter((d) => d.capacityGb > 0.1);
 }
 async function syncServers() {
-    const targetServers = await getServerCsv();
-    if (!targetServers.length)
+    console.log("🚀 Iniciando sincronização baseada no server.csv (id, name)...");
+    const targets = await getServerCsv();
+    if (targets.length === 0) {
+        console.warn("⚠️ Nenhuma linha válida encontrada no CSV. Verifique se o cabeçalho é 'id,name'");
         return;
+    }
+    let sessionToken = "";
     try {
         const sessionRes = await axios.get(`${GLPI_URL}/initSession`, {
-            headers: { 'Authorization': `user_token ${USER_TOKEN}`, 'App-Token': APP_TOKEN }
+            headers: { Authorization: `user_token ${USER_TOKEN}`, "App-Token": APP_TOKEN }
         });
-        const sessionToken = sessionRes.data.session_token;
-        const headers = { 'Session-Token': sessionToken, 'App-Token': APP_TOKEN };
-        const [compRes, vmRes] = await Promise.all([
-            axios.get(`${GLPI_URL}/Computer`, { params: { expand_dropdowns: true, get_full_details: true, range: '0-1000' }, headers }),
-            axios.get(`${GLPI_URL}/Computer_VirtualMachine`, { headers })
-        ]);
-        const glpiComputers = compRes.data;
-        const vmMap = new Map();
-        if (Array.isArray(vmRes.data)) {
-            vmRes.data.forEach((vm) => vmMap.set(vm.items_id, vm.items_id_tech));
-        }
-        for (const server of targetServers) {
-            const glpiComp = glpiComputers.find((c) => (server.hostname && c.name === server.hostname) ||
-                (server.mainIp && c._networks?.some((n) => n.ip === server.mainIp)));
-            if (!glpiComp) {
-                console.warn(`⚠️ Não encontrado no GLPI: ${server.hostname || server.mainIp}`);
-                continue;
+        sessionToken = sessionRes.data.session_token;
+        const headers = { "Session-Token": sessionToken, "App-Token": APP_TOKEN };
+        for (const target of targets) {
+            console.log(`🔍 Processando: ${target.hostname} (GLPI ID: ${target.glpiId})`);
+            try {
+                const detailedRes = await axios.get(`${GLPI_URL}/Computer/${target.glpiId}`, {
+                    params: { expand_dropdowns: true, get_full_details: true },
+                    headers
+                });
+                const foundComp = detailedRes.data;
+                const cpuItem = foundComp._devices?.find((d) => d.devicetype === "Processor") || foundComp.DeviceProcessor?.[0];
+                const cpu = cpuItem?.designation || "N/A";
+                const ramItems = foundComp._memories || foundComp.DeviceMemory || [];
+                const ramMB = ramItems.reduce((acc, m) => acc + (parseInt(m.size) || 0), 0);
+                const ram = ramMB > 0 ? `${(ramMB / 1024).toFixed(1)} GB` : "N/A";
+                const drivesData = parseVolumes(foundComp._filesystems || foundComp.FileSystem || []);
+                const totalHd = drivesData.reduce((acc, v) => acc + v.capacityGb, 0);
+                const hdLabel = totalHd > 0 ? `${totalHd.toFixed(2)} GB` : "N/A";
+                const computer = await prisma.computer.upsert({
+                    where: { glpiId: Number(foundComp.id) },
+                    update: {
+                        hostname: foundComp.name,
+                        cpu,
+                        ram,
+                        hd: hdLabel,
+                        lastSync: new Date()
+                    },
+                    create: {
+                        glpiId: Number(foundComp.id),
+                        hostname: foundComp.name,
+                        mainIp: foundComp.name,
+                        cpu,
+                        ram,
+                        hd: hdLabel,
+                        type: ComputerType.SERVER,
+                        role: ComputerRole.SERVER
+                    }
+                });
+                console.log(`✅ Sincronizado: ${foundComp.name}`);
             }
-            console.log(`\n⚙️ Sincronizando: ${glpiComp.name}`);
-            const hw = await getHardwareSpecs(glpiComp.id, headers);
-            let type = ComputerType.SERVER;
-            let role = ComputerRole.SERVER;
-            let hostFisico = glpiComp.name;
-            if (vmMap.has(glpiComp.id)) {
-                type = ComputerType.VM;
-                const parentId = vmMap.get(glpiComp.id);
-                const parentComp = glpiComputers.find((c) => c.id === parentId);
-                hostFisico = parentComp?.name || glpiComp.name;
-                console.log(`   - Identificado como VM residente em: ${hostFisico}`);
+            catch (err) {
+                console.error(`❌ Erro ao buscar detalhes do ID ${target.glpiId}:`, err.message);
             }
-            await prisma.computer.upsert({
-                where: { mainIp: server.mainIp || glpiComp._networks?.[0]?.ip },
-                update: {
-                    hostname: glpiComp.name,
-                    hostFisico,
-                    cpu: hw.cpu,
-                    ram: hw.ram,
-                    hd: hw.hd,
-                    type,
-                    role,
-                    lastSync: new Date(),
-                    volumes: { deleteMany: {}, create: hw.drives }
-                },
-                create: {
-                    glpiId: glpiComp.id,
-                    hostname: glpiComp.name,
-                    mainIp: server.mainIp || glpiComp._networks?.[0]?.ip,
-                    hostFisico,
-                    cpu: hw.cpu,
-                    ram: hw.ram,
-                    hd: hw.hd,
-                    type,
-                    role,
-                    serial: glpiComp.serial || 'N/A'
-                }
-            });
         }
-        await axios.get(`${GLPI_URL}/killSession`, { headers });
-        console.log('\n✅ Sincronização de servidores finalizada!');
     }
     catch (error) {
-        console.error('❌ Erro:', error.message);
+        console.error("❌ Erro de Sessão:", error.message);
     }
     finally {
         await prisma.$disconnect();

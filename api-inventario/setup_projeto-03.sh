@@ -498,8 +498,8 @@ cat << 'EOF' > .env
 DATABASE_URL="postgresql://admin:123456789@localhost:5432/inventario_db?schema=public"
 JWT_SECRET="super-secret-app-token"
 GLPI_URL=http://192.168.15.20/apirest.php
-GLPI_APP_TOKEN="super-secret-app-token"
-GLPI_USER_TOKEN="seu_token_de_usuario_glpi"
+GLPI_APP_TOKEN="CfIsTR7CwClZwwLbKxZvGFxJrv9RmDT7MwRAgqJF"
+GLPI_USER_TOKEN="n07cWsLuGVIlQtbjOhjVNcahB5CzKGwkejjf7aqc"
 EOF
 
 echo " Criando glpi-sync-csv.ts para sincronizar o banco de dados usando o Prisma Client, o adapter do PostgreSQL e os dados do CSV..."

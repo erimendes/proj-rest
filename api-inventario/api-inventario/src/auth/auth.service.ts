@@ -3,7 +3,7 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { UserService } from '../user/user.service.js';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
-import { Role } from 'src/generated/prisma/enums.js';
+import { Role } from '../generated/prisma/client.js';
 import { RegisterDto } from './dto/register.dto.js';
 import { CreateUserDto } from '../user/dto/create-user.dto.js';
 
