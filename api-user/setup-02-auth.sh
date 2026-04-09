@@ -199,5 +199,124 @@ async function bootstrap() {
 bootstrap();
 EOF
 
+#########################################
+# 🔐 AUTH SERVICE (Lógica de Login)
+#########################################
+
+log "🔑 Criando AuthService..."
+
+cat << 'EOF' > src/modules/auth/auth.service.ts
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { UserService } from '../user/user.service';
+import * as bcrypt from 'bcrypt';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private userService: UserService,
+    private jwtService: JwtService,
+  ) {}
+
+  async login(email: string, pass: string) {
+    const user = await this.userService.findByEmail(email);
+
+    if (!user) {
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
+
+    const isMatch = await bcrypt.compare(pass, user.password);
+
+    if (!isMatch) {
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
+
+    const payload = { sub: user.id, email: user.email, role: user.role };
+
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+    };
+  }
+}
+EOF
+
+#########################################
+# 🛡️ JWT STRATEGY (Validação do Token)
+#########################################
+
+log "🛡️ Criando JwtStrategy..."
+
+mkdir -p src/modules/auth/strategies
+
+cat << 'EOF' > src/modules/auth/strategies/jwt.strategy.ts
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor() {
+    const secret = process.env.JWT_SECRET;
+    
+    // Erro comum: Se o secret estiver vazio, o Passport quebra a aplicação
+    if (!secret) {
+      throw new Error('JWT_SECRET não definido nas variáveis de ambiente');
+    }
+
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: secret,
+    });
+  }
+
+  async validate(payload: any) {
+    // Se o payload não tiver o 'sub' (ID do usuário), o token é inválido
+    if (!payload || !payload.sub) {
+      throw new UnauthorizedException('Token inválido ou malformado');
+    }
+
+    // O que retornamos aqui fica disponível em 'req.user'
+    return { 
+      userId: payload.sub, 
+      email: payload.email, 
+      role: payload.role 
+    };
+  }
+}
+EOF
+
+#########################################
+# 📦 AUTH MODULE (Conectando tudo)
+#########################################
+
+log "📦 Atualizando AuthModule..."
+
+cat << 'EOF' > src/modules/auth/auth.module.ts
+import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { UserModule } from '../user/user.module';
+import { AuthService } from './auth.service';
+import { AuthController } from './auth.controller';
+import { JwtStrategy } from './strategies/jwt.strategy';
+
+@Module({
+  imports: [
+    UserModule,
+    PassportModule,
+    JwtModule.register({
+      global: true,
+      secret: process.env.JWT_SECRET,
+      signOptions: { expiresIn: '1d' },
+    }),
+  ],
+  providers: [AuthService, JwtStrategy],
+  controllers: [AuthController],
+  exports: [AuthService],
+})
+export class AuthModule {}
+EOF
+
 log "✅ SWAGGER PROFISSIONAL CONFIGURADO!"
 log "📄 Documentação: http://localhost:3000/api"
