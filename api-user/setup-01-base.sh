@@ -29,7 +29,8 @@ npm install \
   bcrypt \
   @prisma/client \
   pg \
-  dotenv
+  dotenv \
+  @prisma/adapter-pg
 
 npm install -D prisma ts-node @types/pg @types/node @types/passport-jwt @types/bcrypt
 
