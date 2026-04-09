@@ -1,10 +1,12 @@
-# ./docker-compose.yml
 services:
-  identity-db:
-    image: postgres:15
+  db:
+    image: postgres:latest
+    container_name: it_asset_db
+    restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: nestdb
+      POSTGRES_DB: it_asset_db
     ports:
-      - "5432:5432" # Porta diferente para não conflitar com outros DBs
+      - "5432:5432"
+    
