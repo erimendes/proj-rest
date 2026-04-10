@@ -1,228 +1,100 @@
-Boa — agora vale organizar isso porque você já tem um **pipeline completo de backend profissional**. Vou te explicar **cada script de forma clara e prática**, como se fosse uma evolução de maturidade.
+O seu `README.md` está excelente e com uma narrativa de evolução muito clara! Como agora você adicionou o **RBAC (Script 05)** e corrigiu problemas reais de **Drift de Banco** e **Tipagem**, fiz alguns ajustes estratégicos para incluir essas melhorias técnicas e atualizar a numeração.
+
+Aqui está a versão refinada e profissional:
 
 ---
 
-# 🧱 🥇 Script 01 — Base do projeto (setup inicial)
+# 🧱 🥇 Script 01 — Base & Estrutura (The Foundation)
+**Foco:** Setup inicial e conexão.
 
-### 👉 O que ele faz:
-
-* Cria projeto NestJS
-* Instala dependências principais
-* Configura:
-
-  * Prisma
-  * PostgreSQL
-  * Swagger básico
-* Cria:
-
-  * `User` module
-  * `PrismaService`
-  * DTOs básicos
+* **O que ele faz:**
+    * Scaffold do NestJS e instalação de dependências.
+    * Configuração do **Prisma ORM** com PostgreSQL.
+    * Definição do modelo `User` e `Role` (Enum).
+    * Configuração de um **Swagger** funcional.
+* **Resultado:** Uma API funcional com CRUD de usuários e banco de dados conectado.
+* **Nível:** 🟢 **Iniciante / Boilerplate**
 
 ---
 
-### 🧠 Resultado:
+# 🔐 🥈 Script 02 — Autenticação & Argon2 (Security First)
+**Foco:** Troca de segurança básica por criptografia moderna.
 
-Você tem uma API que:
-
-✅ roda
-✅ conecta no banco
-✅ cria usuários
-✅ tem Swagger básico
-
-👉 **Nível: iniciante / boilerplate**
-
----
-
-# 🔐 🥈 Script 02 — Auth profissional (JWT + refresh simples)
-
-### 👉 O que ele adiciona:
-
-* Módulo `auth`
-* Login e registro
-* JWT (access token)
-* Refresh token (salvo no user)
-* Guards (`JwtAuthGuard`)
-* Roles (RBAC básico)
+* **O que ele adiciona:**
+    * Migração de Bcrypt para **Argon2** (vencedor do *Password Hashing Competition*).
+    * Estrutura de `AuthService` com validação de credenciais.
+    * Geração de par de tokens (Access + Refresh).
+* **Resultado:** Senhas protegidas contra ataques de força bruta de última geração.
+* **Nível:** 🟡 **Pleno / Seguro**
 
 ---
 
-### 🧠 Resultado:
+# 🏦 🥉 Script 03 — Gestão de Sessões (Fintech Grade)
+**Foco:** Multi-device e controle total de acessos.
 
-Agora sua API tem:
-
-✅ autenticação
-✅ rotas protegidas
-✅ controle de acesso (roles)
-✅ refresh token simples
-
-👉 **Nível: backend pleno**
-
----
-
-# 🏦 🥉 Script 03 — Auth nível fintech
-
-### 👉 O que ele muda completamente:
-
-Sai de:
-
-```
-1 usuário = 1 refresh token
-```
-
-Para:
-
-```
-1 usuário = N sessões (multi-device)
-```
+* **O que ele muda:**
+    * **Multi-device:** De 1 usuário por token para 1 usuário com **N sessões** simultâneas.
+    * **Refresh Token Rotation:** Invalida o token antigo a cada renovação, prevenindo roubo de sessão.
+    * **Detecção de Reuso:** Se um token antigo for reutilizado, o sistema revoga **todas** as sessões por segurança.
+* **Resultado:** Segurança nível bancário com auditoria de IP e UserAgent.
+* **Nível:** 🔴 **Fintech / SaaS Enterprise**
 
 ---
 
-### 🔥 Ele implementa:
+# 📘 🧾 Script 04 — Swagger & DX (Developer Experience)
+**Foco:** Transformar código em um produto consumível.
 
-#### 1. Sessions no banco
-
-```ts id="sessionsmodel"
-Session {
-  userId
-  refreshToken (hash)
-  ip
-  userAgent
-  revoked
-}
-```
+* **O que ele faz:**
+    * Implementa **DTOs de Resposta** para padronizar o que a API devolve.
+    * Adiciona decorators `@ApiOperation` e `@ApiResponse`.
+    * Configura o botão **Authorize (JWT)** no Swagger.
+    * Resolve problemas de tipagem com **Prisma Client Generation**.
+* **Resultado:** Uma documentação que permite testar todo o fluxo de auth pelo navegador.
+* **Nível:** 🔵 **Profissional / Documentado**
 
 ---
 
-#### 2. Refresh Token Rotation
+# 🛡️ 🎖️ Script 05 — RBAC & Governança (Admin Level)
+**Foco:** Controle de acesso baseado em hierarquia.
 
-* Cada refresh:
-
-  * invalida o token antigo
-  * cria um novo
-
----
-
-#### 3. Proteção contra ataque (token reuse)
-
-Se alguém tentar usar um token antigo:
-
-💣 sistema detecta
-💣 revoga TODAS sessões
-💣 força relogin
+* **O que ele adiciona:**
+    * **RolesGuard:** Um motor de autorização que lê o cargo do usuário no token.
+    * **Decorador @Roles:** Permite fechar rotas apenas para `ADMIN` ou `MANAGER`.
+    * **Módulo Admin:** Endpoints protegidos para gestão sensível.
+    * **Resiliência de Banco:** Automação de `db push` e `resolve` para evitar perda de dados e erros de *Drift*.
+* **Resultado:** Controle absoluto sobre "quem pode o quê" dentro do sistema.
+* **Nível:** 🔥 **Architect / Senior**
 
 ---
 
-#### 4. Multi-device
+# 🧠 VISÃO GERAL (Tabela de Evolução)
 
-Você pode ter:
-
-* celular
-* notebook
-* tablet
-
-cada um com sessão própria
-
----
-
-#### 5. Logout real
-
-* logout de 1 sessão
-* logout global
+| Script    | Objetivo Principal                | Tecnologia Chave       | Nível          |
+| --------- | --------------------------------- | ---------------------- | -------------- |
+| Script 01 | Estrutura & Banco                 | NestJS + Prisma        | 🟢 Iniciante   |
+| Script 02 | Autenticação Robusta              | Argon2 + JWT           | 🟡 Pleno       |
+| Script 03 | Sessões & Multi-device            | Session Table + ROT    | 🔴 Fintech     |
+| Script 04 | Documentação & Tipagem            | Swagger + DTOs         | 🔵 Profissional|
+| Script 05 | Autorização (RBAC)                | Guards + Decorators    | 🛡️ Senior      |
 
 ---
 
-### 🧠 Resultado:
+# 🧩 Como a Segurança se Camufla (Fluxo da Requisição)
 
-✅ segurança de nível bancário
-✅ controle total de sessões
-✅ proteção contra roubo de token
-✅ arquitetura escalável
 
-👉 **Nível: fintech / SaaS grande**
 
----
-
-# 📘 🧾 Script 04 — Swagger profissional
-
-### 👉 O que ele faz:
-
-Não muda lógica — melhora **DX (developer experience)**
+1. **Req** ➡️ `JwtAuthGuard` (Você é quem diz ser?)
+2. ➡️ `RolesGuard` (Você tem permissão para entrar aqui?)
+3. ➡️ `Controller` (Lógica de Negócio)
+4. ⬅️ **Res**
 
 ---
 
-### 🔥 Ele adiciona:
-
-* DTO de resposta (`AuthResponseDto`)
-* documentação completa nos endpoints
-* descrições (`@ApiOperation`)
-* respostas (`@ApiResponse`)
-* botão **Authorize (JWT)** no Swagger
-* persistência do token
+# 🚀 Status Atual do Projeto
+* ✅ Autenticação com Argon2.
+* ✅ Refresh Token Rotation (Sessões persistentes).
+* ✅ RBAC (Admin/Manager/User).
+* ✅ Swagger 100% funcional.
+* ✅ Sincronização de banco sem perda de dados (`db push`).
 
 ---
-
-### 🧠 Resultado:
-
-✅ API auto-documentada
-✅ testável no browser
-✅ padrão empresa (tipo Stripe, Nubank)
-
-👉 **Nível: documentação profissional**
-
----
-
-# 🧠 VISÃO GERAL (evolução)
-
-| Script    | Foco                          | Nível           |
-| --------- | ----------------------------- | --------------- |
-| Script 01 | Base + Prisma + Swagger       | 🟢 Iniciante    |
-| Script 02 | Auth JWT + RBAC               | 🟡 Pleno        |
-| Script 03 | Segurança avançada (sessions) | 🔴 Fintech      |
-| Script 04 | Documentação Swagger          | 🔵 Profissional |
-
----
-
-# 🧩 Como eles se encaixam
-
-```mermaid id="flow1"
-graph TD
-A[Script 01] --> B[Script 02]
-B --> C[Script 03]
-C --> D[Script 04]
-```
-
----
-
-# 💡 Tradução simples (bem direta)
-
-* **Script 01** → “faz funcionar”
-* **Script 02** → “tem login”
-* **Script 03** → “é seguro de verdade”
-* **Script 04** → “é usável por outros devs”
-
----
-
-# 🚀 Se você já rodou todos
-
-Você já tem:
-
-* 🔐 sistema de auth nível fintech
-* 🧱 arquitetura sólida
-* 📘 documentação profissional
-* 🐳 pronto pra produção
-
----
-
-# 💣 Próximo nível (se quiser evoluir mais ainda)
-
-Posso te levar pra:
-
-* ☁️ deploy real (AWS / GCP / Fly.io)
-* 📊 observabilidade (logs + tracing)
-* 🧪 testes automatizados completos
-* ⚡ performance (Redis + cache)
-* 🔐 RBAC avançado (permissões granulares)
-
-Só fala:
-👉 **“quero virar senior de backend”**
