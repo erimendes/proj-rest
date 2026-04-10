@@ -19,16 +19,21 @@ log "🧹 Removendo hash automático do UserService..."
 cat << 'EOF' > src/modules/user/user.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { Prisma } from '@prisma/client';
+import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
-  async create(data: Prisma.UserCreateInput) {
-    // Agora o UserService apenas salva. Quem decide o hash é o AuthService.
+  // Usamos o CreateUserDto para manter a compatibilidade que você já tinha,
+  // mas agora sem fazer o hash aqui dentro.
+  async create(data: CreateUserDto) {
     return this.prisma.user.create({
-      data: data,
+      data: {
+        email: data.email,
+        password: data.password, // A senha já vem hasheada do AuthService
+        name: data.name,
+      },
     });
   }
 
