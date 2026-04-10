@@ -301,14 +301,21 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
+// auth.module.ts
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
 @Module({
   imports: [
     UserModule,
     PassportModule,
-    JwtModule.register({
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '1d' },
+      }),
       global: true,
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '1d' },
     }),
   ],
   providers: [AuthService, JwtStrategy],
@@ -316,6 +323,9 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   exports: [AuthService],
 })
 export class AuthModule {}
+export * from './auth.service';
+export * from './auth.controller';
+export * from './strategies/jwt.strategy';
 EOF
 
 log "✅ SWAGGER PROFISSIONAL CONFIGURADO!"

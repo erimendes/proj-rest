@@ -8,9 +8,9 @@ export class UserService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateUserDto) {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
+    // const hashedPassword = await bcrypt.hash(data.password, 10);
     return this.prisma.user.create({
-      data: { ...data, password: hashedPassword },
+      data: { ...data, password: data.password }, // A senha será hasheada no Prisma Middleware
     });
   }
 
