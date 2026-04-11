@@ -17,14 +17,14 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const auth_service_1 = require("./auth.service");
 const login_dto_1 = require("./dto/login.dto");
-const register_dto_1 = require("./dto/register.dto");
+const create_user_dto_1 = require("../user/dto/create-user.dto");
 const refresh_token_dto_1 = require("./dto/refresh-token.dto");
 let AuthController = class AuthController {
     auth;
     constructor(auth) {
         this.auth = auth;
     }
-    register(body) {
+    async register(body, req) {
         return this.auth.register(body.email, body.password, body.name);
     }
     login(body, req) {
@@ -40,16 +40,18 @@ let AuthController = class AuthController {
 exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('register'),
-    (0, swagger_1.ApiOperation)({ summary: 'Registrar e retornar tokens' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Auto-cadastro de novos clientes' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Cadastro realizado e tokens gerados' }),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [register_dto_1.RegisterDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto, Object]),
+    __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
 __decorate([
     (0, common_1.Post)('login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, swagger_1.ApiOperation)({ summary: 'Login com persistência de sessão' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Login de usuário existente' }),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),

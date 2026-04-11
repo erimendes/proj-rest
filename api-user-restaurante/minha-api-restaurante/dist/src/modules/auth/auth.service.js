@@ -61,10 +61,9 @@ let AuthService = class AuthService {
         const existing = await this.users.findByEmail(email);
         if (existing)
             throw new common_1.ConflictException('E-mail já cadastrado');
-        const hashedPassword = await argon2.hash(pass);
         const user = await this.users.create({
             email,
-            password: hashedPassword,
+            password: pass,
             name,
         });
         return this.generateTokens(user);

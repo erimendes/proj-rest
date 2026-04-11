@@ -1,11 +1,11 @@
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import { CreateUserDto } from '../user/dto/create-user.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 export declare class AuthController {
-    private auth;
+    private readonly auth;
     constructor(auth: AuthService);
-    register(body: RegisterDto): Promise<{
+    register(body: CreateUserDto, req: any): Promise<{
         accessToken: string;
         refreshToken: string;
     }>;

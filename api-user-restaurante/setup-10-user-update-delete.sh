@@ -65,9 +65,18 @@ export class UserService {
   }
 
   async update(id: string, data: UpdateUserDto) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    if (data.email && data.email !== user.email) {
+      const emailExists = await this.prisma.user.findUnique({ where: { email: data.email } });
+      if (emailExists) throw new ConflictException('E-mail já está em uso');
+    }
+
     if (data.password) {
       data.password = await argon2.hash(data.password);
     }
+
     return this.prisma.user.update({
       where: { id },
       data,
@@ -79,6 +88,15 @@ export class UserService {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
+  async findById(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, name: true, role: true }
+    });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    return user;
+  }
+
   async findAll() {
     return this.prisma.user.findMany({
       select: { id: true, email: true, name: true, role: true, createdAt: true }
@@ -86,7 +104,14 @@ export class UserService {
   }
 
   async remove(id: string) {
-    return this.prisma.user.delete({ where: { id } });
+    try {
+      return await this.prisma.user.delete({ where: { id } });
+    } catch (error: any) {
+      if (error.code === 'P2025') {
+        throw new NotFoundException('Usuário não encontrado para exclusão');
+      }
+      throw error;
+    }
   }
 }
 EOF
@@ -97,31 +122,40 @@ EOF
 log "🎮 Atualizando UserController com Patch e Delete..."
 
 cat << 'EOF' > src/modules/user/user.controller.ts
-import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { 
+  Controller, Get, Post, Patch, Delete, Body, 
+  Param, UseGuards, Req 
+} from '@nestjs/common'; // Removi o ParseIntPipe daqui
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserService } from './user.service';
-import { RegisterDto } from './dto/register.dto';
+import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../generated/prisma/client';
 
-@ApiTags('users')
+@ApiTags('users (Admin Only)')
+@ApiBearerAuth() // Swagger pede o Token para todas as rotas deste controller
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN) // 🔥 Bloqueio Global: Só ADMIN acessa qualquer rota aqui
 @Controller('users')
 export class UserController {
-  constructor(private service: UserService) {}
+  constructor(private readonly service: UserService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Registrar novo usuário' })
-  register(@Body() body: RegisterDto) {
+  @ApiOperation({ summary: 'Provisionar novo usuário (Admin)' })
+  @ApiResponse({ status: 201, description: 'Usuário criado mas não logado' })
+  create(@Body() body: CreateUserDto) {
+    // Retorna apenas os dados do usuário, sem tokens
     return this.service.create(body);
   }
 
   @Get()
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Listar todos os usuários' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Listar todos os usuários (Apenas ADMIN)' })
   findAll() {
     return this.service.findAll();
   }
@@ -131,7 +165,9 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Atualizar meu próprio perfil' })
   updateMe(@Req() req: any, @Body() body: UpdateUserDto) {
-    return this.service.update(req.user.userId, body);
+    // Pegamos o ID da string vinda do token (sub ou userId)
+    const userId = req.user.sub || req.user.userId;
+    return this.service.update(userId, body);
   }
 
   @Delete(':id')
@@ -139,7 +175,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Deletar um usuário (Apenas ADMIN)' })
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: string) { 
     return this.service.remove(id);
   }
 }

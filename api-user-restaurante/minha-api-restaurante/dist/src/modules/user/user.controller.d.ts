@@ -3,32 +3,33 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Role } from '../../generated/prisma/client';
 export declare class UserController {
-    private service;
+    private readonly service;
     constructor(service: UserService);
-    register(body: CreateUserDto): Promise<{
+    create(body: CreateUserDto): Promise<{
+        id: string;
         email: string;
         name: string | null;
-        id: string;
         role: Role;
+        createdAt: Date;
     }>;
     findAll(): Promise<{
+        id: string;
         email: string;
         name: string | null;
-        id: string;
         role: Role;
         createdAt: Date;
     }[]>;
     updateMe(req: any, body: UpdateUserDto): Promise<{
+        id: string;
         email: string;
         name: string | null;
-        id: string;
         role: Role;
     }>;
     remove(id: string): Promise<{
+        id: string;
         email: string;
         password: string;
         name: string | null;
-        id: string;
         role: Role;
         createdAt: Date;
         updatedAt: Date;

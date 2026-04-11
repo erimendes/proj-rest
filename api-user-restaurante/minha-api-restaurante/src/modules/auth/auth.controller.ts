@@ -2,23 +2,25 @@ import { Controller, Post, Body, Req, HttpCode, HttpStatus, BadRequestException 
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import { CreateUserDto } from '../user/dto/create-user.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private auth: AuthService) {}
+  constructor(private readonly auth: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Registrar e retornar tokens' })
-  register(@Body() body: RegisterDto) {
+  @ApiOperation({ summary: 'Auto-cadastro de novos clientes' })
+  @ApiResponse({ status: 201, description: 'Cadastro realizado e tokens gerados' })
+  async register(@Body() body: CreateUserDto, @Req() req: any) {
+    // Chama o register do AuthService que já hasheia e gera tokens
     return this.auth.register(body.email, body.password, body.name);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Login com persistência de sessão' })
+  @ApiOperation({ summary: 'Login de usuário existente' })
   login(@Body() body: LoginDto, @Req() req: any) {
     return this.auth.login(body, {
       ip: req.ip,
