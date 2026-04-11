@@ -348,12 +348,11 @@ cat << 'EOF' > tsconfig.json
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "ES2023",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
-    "paths": {
-      "@generated/*": ["src/generated/*"]
-    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
