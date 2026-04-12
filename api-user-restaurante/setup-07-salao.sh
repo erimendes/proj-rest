@@ -74,6 +74,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role, TableStatus } from '../../generated/prisma/client';
+import { CreateTableDto } from './dto/create-table.dto';
 
 @ApiTags('tables')
 @Controller('tables')
@@ -84,9 +85,8 @@ export class TableController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.MANAGER)
-  @ApiOperation({ summary: 'Criar nova mesa (Admin/Manager)' })
-  create(@Body('number') number: number) {
-    return this.tableService.create(number);
+  create(@Body() createTableDto: CreateTableDto) { // Use o DTO aqui
+    return this.tableService.create(createTableDto.number); // Acesse o .number
   }
 
   @Get()
@@ -122,9 +122,25 @@ export class TableController {
 EOF
 
 #########################################
-# PASSO 4: SINCRONIZAÇÃO
+# PASSO 4: TABLE - DTO
 #########################################
-echo -e "${GREEN}👉 Passo 4: Sincronizando banco...${NC}"
+echo -e "${GREEN}👉 Passo 4: Configurando TableDTO...${NC}"
+cat << 'EOF' > src/modules/table/dto/create-table.dto.ts
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNumber, IsNotEmpty } from 'class-validator';
+
+export class CreateTableDto {
+  @ApiProperty({ example: 1, description: 'O número da mesa' })
+  @IsNumber()    // <--- ESSENCIAL: Sem isso, a 'whitelist' remove o campo
+  @IsNotEmpty()  // <--- Garante que o número não seja enviado vazio
+  number!: number;
+}
+EOF
+
+#########################################
+# PASSO 5: SINCRONIZAÇÃO
+#########################################
+echo -e "${GREEN}👉 Passo 5: Sincronizando banco...${NC}"
 npx prisma db push
 npx prisma generate
 

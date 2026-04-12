@@ -20,21 +20,22 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
 const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const client_1 = require("../../generated/prisma/client");
+const create_product_dto_1 = require("./dto/create-product.dto");
 let ProductController = class ProductController {
     productService;
     constructor(productService) {
         this.productService = productService;
     }
-    create(data) {
-        return this.productService.create(data);
+    create(createProductDto) {
+        return this.productService.create(createProductDto);
     }
     findAll(categoryId) {
         if (categoryId)
             return this.productService.findByCategory(categoryId);
         return this.productService.findAll();
     }
-    update(id, data) {
-        return this.productService.update(id, data);
+    update(id, updateData) {
+        return this.productService.update(id, updateData);
     }
     remove(id) {
         return this.productService.remove(id);
@@ -49,12 +50,13 @@ __decorate([
     (0, swagger_1.ApiOperation)({ summary: 'Cadastrar produto (Admin/Manager)' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [create_product_dto_1.CreateProductDto]),
     __metadata("design:returntype", void 0)
 ], ProductController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiOperation)({ summary: 'Listar todos os produtos' }),
+    (0, swagger_1.ApiQuery)({ name: 'categoryId', required: false, description: 'Filtrar por ID da categoria' }),
     __param(0, (0, common_1.Query)('categoryId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -65,7 +67,7 @@ __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
-    (0, swagger_1.ApiOperation)({ summary: 'Atualizar dados do produto (Preço, nome, etc)' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Atualizar dados do produto' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),

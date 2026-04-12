@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role, TableStatus } from '../../generated/prisma/client';
+import { CreateTableDto } from './dto/create-table.dto';
 
 @ApiTags('tables')
 @Controller('tables')
@@ -15,9 +16,8 @@ export class TableController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.MANAGER)
-  @ApiOperation({ summary: 'Criar nova mesa (Admin/Manager)' })
-  create(@Body('number') number: number) {
-    return this.tableService.create(number);
+  create(@Body() createTableDto: CreateTableDto) { // Use o DTO aqui
+    return this.tableService.create(createTableDto.number); // Acesse o .number
   }
 
   @Get()

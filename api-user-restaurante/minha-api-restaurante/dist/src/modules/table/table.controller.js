@@ -20,13 +20,14 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
 const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const client_1 = require("../../generated/prisma/client");
+const create_table_dto_1 = require("./dto/create-table.dto");
 let TableController = class TableController {
     tableService;
     constructor(tableService) {
         this.tableService = tableService;
     }
-    create(number) {
-        return this.tableService.create(number);
+    create(createTableDto) {
+        return this.tableService.create(createTableDto.number);
     }
     findAll() {
         return this.tableService.findAll();
@@ -47,10 +48,9 @@ __decorate([
     (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
-    (0, swagger_1.ApiOperation)({ summary: 'Criar nova mesa (Admin/Manager)' }),
-    __param(0, (0, common_1.Body)('number')),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
+    __metadata("design:paramtypes", [create_table_dto_1.CreateTableDto]),
     __metadata("design:returntype", void 0)
 ], TableController.prototype, "create", null);
 __decorate([

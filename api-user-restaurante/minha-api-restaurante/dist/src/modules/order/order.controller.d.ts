@@ -37,8 +37,8 @@ export declare class OrderController {
                 name: string;
                 id: string;
                 createdAt: Date;
-                price: import("@prisma/client-runtime-utils").Decimal;
                 imageUrl: string | null;
+                price: import("@prisma/client-runtime-utils").Decimal;
                 categoryId: string;
             };
         } & {
@@ -84,8 +84,8 @@ export declare class OrderController {
                 name: string;
                 id: string;
                 createdAt: Date;
-                price: import("@prisma/client-runtime-utils").Decimal;
                 imageUrl: string | null;
+                price: import("@prisma/client-runtime-utils").Decimal;
                 categoryId: string;
             };
         } & {

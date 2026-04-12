@@ -3,41 +3,46 @@
 # --- CONFIGURAÇÕES ---
 URL="http://localhost:3000"
 JSON_FILE="setup_menu_full.json"
+# ❗ INSIRA UM TOKEN VÁLIDO DE ADMIN AQUI (Gerado no seu Login)
+TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3YzEwNWM3MS00OWRhLTQyYTMtOTAxZS02NWFlZjlhZTkwYjciLCJlbWFpbCI6ImFkbWluMDFAYWRtaW4uY29tIiwicm9sZSI6IkFETUlOIiwiaWF0IjoxNzc1OTYzNDAxLCJleHAiOjE3NzY1NjgyMDF9.LgRpoSNmMQ-JRK3iFrO6xE0bDi0JE1qff83qta5sz0I" 
 
-echo "🚀 IMPORTADOR COMPATÍVEL COM NESTJS (FIELD: imageUrl)"
+echo "🚀 IMPORTADOR BLINDADO (NESTJS + DTO + AUTH)"
 echo "======================================================"
 
-# Verifica se o jq está instalado
+# Verificações de dependências
 if ! command -v jq &> /dev/null; then
   echo "❌ Erro: Instale o 'jq' (sudo apt install jq)"
   exit 1
 fi
 
-# Verifica se o arquivo JSON existe
 if [ ! -f "$JSON_FILE" ]; then
   echo "❌ Erro: Arquivo $JSON_FILE não encontrado!"
   exit 1
 fi
 
-# Função para registrar logs com data
 log() { echo -e "[$(date +%H:%M:%S)] $1"; }
 
 # --- 1. CARREGAR CACHE ---
 log "📥 Sincronizando dados atuais do banco..."
-ALL_CATEGORIES=$(curl -s "$URL/categories")
-ALL_PRODUCTS=$(curl -s "$URL/products")
+ALL_CATEGORIES=$(curl -s -H "Authorization: Bearer $TOKEN" "$URL/categories")
+ALL_PRODUCTS=$(curl -s -H "Authorization: Bearer $TOKEN" "$URL/products")
+
+# Validar se o Token está funcionando
+if echo "$ALL_CATEGORIES" | grep -q "Unauthorized"; then
+  echo "❌ Erro: Token expirado ou inválido. Atualize a variável TOKEN no script."
+  exit 1
+fi
 
 declare -A CATEGORY_CACHE
 
-# Mapeia categorias existentes para evitar duplicatas
+# Mapeia categorias existentes (Evita duplicatas no loop)
 while read -r row; do
   NAME=$(echo "$row" | jq -r '.name')
   ID=$(echo "$row" | jq -r '.id')
   CATEGORY_CACHE["$NAME"]="$ID"
-done < <(echo "$ALL_CATEGORIES" | jq -c '.[]')
+done < <(echo "$ALL_CATEGORIES" | jq -c '.[]' 2>/dev/null || echo "")
 
 # --- 2. LOOP DE IMPORTAÇÃO ---
-# Itera sobre o JSON consolidado
 jq -c '.[]' "$JSON_FILE" | while read -r cat_block; do
   CAT_NAME=$(echo "$cat_block" | jq -r '.categoria')
   
@@ -45,53 +50,58 @@ jq -c '.[]' "$JSON_FILE" | while read -r cat_block; do
   CAT_ID="${CATEGORY_CACHE[$CAT_NAME]}"
   
   if [[ -z "$CAT_ID" || "$CAT_ID" == "null" ]]; then
-    log "📦 Criando nova categoria: $CAT_NAME"
+    log "📦 Criando categoria: $CAT_NAME"
     RES_CAT=$(curl -s -X POST "$URL/categories" \
       -H "Content-Type: application/json" \
+      -H "Authorization: Bearer $TOKEN" \
       -d "{\"name\":\"$CAT_NAME\"}")
     CAT_ID=$(echo "$RES_CAT" | jq -r '.id')
     CATEGORY_CACHE["$CAT_NAME"]="$CAT_ID"
   fi
 
-  log "➡️ Processando: $CAT_NAME"
+  log "➡️ Categoria: $CAT_NAME (ID: $CAT_ID)"
 
-  # 2.2 Tratar Produtos da Categoria
+  # 2.2 Tratar Produtos
   echo "$cat_block" | jq -c '.produtos[]' | while read -r prod; do
     NAME=$(echo "$prod" | jq -r '.name')
     PRICE=$(echo "$prod" | jq -r '.price')
-    DESC=$(echo "$prod" | jq -r '.description')
-    IMG_URL=$(echo "$prod" | jq -r '.image') # Pega 'image' do JSON
+    DESC=$(echo "$prod" | jq -r '.description // ""') # Garante string vazia se nulo
 
-    # MONTA O JSON PARA O NESTJS (Mapeando image -> imageUrl)
+    # MONTA O JSON EXATO QUE O CreateProductDto ESPERA
     PAYLOAD=$(jq -n \
       --arg name "$NAME" \
       --arg desc "$DESC" \
-      --arg img "$IMG_URL" \
       --arg cat "$CAT_ID" \
       --arg price "$PRICE" \
       '{
         name: $name,
         description: $desc,
-        imageUrl: $img,
         price: ($price | tonumber),
         categoryId: $cat
       }')
 
-    # Verifica se o produto já existe pelo nome (Case Insensitive)
+    # Verifica se o produto já existe (Case Insensitive)
     EXIST_ID=$(echo "$ALL_PRODUCTS" | jq -r ".[] | select(.name | ascii_downcase == (\"$NAME\" | ascii_downcase)) | .id" | head -n 1)
 
     if [[ -n "$EXIST_ID" && "$EXIST_ID" != "null" ]]; then
       log "  ♻️ Atualizando: $NAME"
       curl -s -X PATCH "$URL/products/$EXIST_ID" \
         -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $TOKEN" \
         -d "$PAYLOAD" > /dev/null
     else
       log "  ➕ Criando: $NAME"
-      curl -s -X POST "$URL/products" \
+      # O POST retorna 201 se o DTO for válido
+      HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$URL/products" \
         -H "Content-Type: application/json" \
-        -d "$PAYLOAD" > /dev/null
+        -H "Authorization: Bearer $TOKEN" \
+        -d "$PAYLOAD")
+      
+      if [ "$HTTP_CODE" -ne 201 ]; then
+        log "  ⚠️ Falha ao criar $NAME (HTTP $HTTP_CODE)"
+      fi
     fi
   done
 done
 
-echo -e "\n🎉 PROCESSO CONCLUÍDO COM SUCESSO!"
+echo -e "\n🎉 IMPORTAÇÃO CONCLUÍDA!"

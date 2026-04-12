@@ -62,7 +62,8 @@ model Session {
 // --- MÓDULO DE CARDÁPIO ---
 model Category {
   id       String    @id @default(uuid())
-  name     String
+  name     String    @unique
+  imageUrl String?
   products Product[]
 }
 

@@ -1,37 +1,39 @@
 import { ProductService } from './product.service';
+import { CreateProductDto } from './dto/create-product.dto';
 export declare class ProductController {
     private readonly productService;
     constructor(productService: ProductService);
-    create(data: {
-        name: string;
-        price: number;
-        categoryId: string;
-        description?: string;
-    }): Promise<{
+    create(createProductDto: CreateProductDto): Promise<{
         description: string | null;
         name: string;
         id: string;
         createdAt: Date;
-        price: import("@prisma/client-runtime-utils").Decimal;
         imageUrl: string | null;
+        price: import("@prisma/client-runtime-utils").Decimal;
         categoryId: string;
     }>;
-    findAll(categoryId?: string): Promise<{
+    findAll(categoryId?: string): Promise<({
+        category: {
+            name: string;
+            id: string;
+            imageUrl: string | null;
+        };
+    } & {
         description: string | null;
         name: string;
         id: string;
         createdAt: Date;
-        price: import("@prisma/client-runtime-utils").Decimal;
         imageUrl: string | null;
+        price: import("@prisma/client-runtime-utils").Decimal;
         categoryId: string;
-    }[]>;
-    update(id: string, data: any): Promise<{
+    })[]>;
+    update(id: string, updateData: Partial<CreateProductDto>): Promise<{
         description: string | null;
         name: string;
         id: string;
         createdAt: Date;
-        price: import("@prisma/client-runtime-utils").Decimal;
         imageUrl: string | null;
+        price: import("@prisma/client-runtime-utils").Decimal;
         categoryId: string;
     }>;
     remove(id: string): Promise<{
@@ -39,8 +41,8 @@ export declare class ProductController {
         name: string;
         id: string;
         createdAt: Date;
-        price: import("@prisma/client-runtime-utils").Decimal;
         imageUrl: string | null;
+        price: import("@prisma/client-runtime-utils").Decimal;
         categoryId: string;
     }>;
 }

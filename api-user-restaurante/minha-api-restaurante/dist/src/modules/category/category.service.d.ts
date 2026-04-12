@@ -5,6 +5,7 @@ export declare class CategoryService {
     create(name: string): Promise<{
         name: string;
         id: string;
+        imageUrl: string | null;
     }>;
     findAll(): Promise<({
         products: {
@@ -12,20 +13,23 @@ export declare class CategoryService {
             name: string;
             id: string;
             createdAt: Date;
-            price: import("@prisma/client-runtime-utils").Decimal;
             imageUrl: string | null;
+            price: import("@prisma/client-runtime-utils").Decimal;
             categoryId: string;
         }[];
     } & {
         name: string;
         id: string;
+        imageUrl: string | null;
     })[]>;
-    remove(id: string): Promise<{
-        name: string;
-        id: string;
-    }>;
     update(id: string, name: string): Promise<{
         name: string;
         id: string;
+        imageUrl: string | null;
+    }>;
+    remove(id: string): Promise<{
+        name: string;
+        id: string;
+        imageUrl: string | null;
     }>;
 }

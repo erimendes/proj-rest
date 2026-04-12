@@ -18,27 +18,60 @@ let ProductService = class ProductService {
         this.prisma = prisma;
     }
     async create(data) {
-        const categoryExists = await this.prisma.category.findUnique({ where: { id: data.categoryId } });
-        if (!categoryExists)
-            throw new common_1.NotFoundException('Categoria não encontrada');
-        return this.prisma.product.create({ data });
+        const categoryExists = await this.prisma.category.findUnique({
+            where: { id: data.categoryId }
+        });
+        if (!categoryExists) {
+            throw new common_1.NotFoundException('A categoria informada não existe');
+        }
+        try {
+            return await this.prisma.product.create({
+                data: {
+                    name: data.name,
+                    price: data.price,
+                    description: data.description,
+                    categoryId: data.categoryId,
+                }
+            });
+        }
+        catch (error) {
+            throw new common_1.BadRequestException('Não foi possível criar o produto. Verifique os dados.');
+        }
     }
     async findAll() {
-        return this.prisma.product.findMany({ include: { category: true } });
+        return this.prisma.product.findMany({
+            include: { category: true },
+            orderBy: { createdAt: 'desc' }
+        });
     }
     async findByCategory(categoryId) {
-        return this.prisma.product.findMany({ where: { categoryId } });
+        if (!categoryId)
+            throw new common_1.BadRequestException('ID da categoria é obrigatório');
+        return this.prisma.product.findMany({
+            where: { categoryId },
+            include: { category: true }
+        });
     }
     async update(id, data) {
         const product = await this.prisma.product.findUnique({ where: { id } });
         if (!product)
             throw new common_1.NotFoundException('Produto não encontrado');
+        if (data.categoryId) {
+            const categoryExists = await this.prisma.category.findUnique({
+                where: { id: data.categoryId }
+            });
+            if (!categoryExists)
+                throw new common_1.NotFoundException('Nova categoria não encontrada');
+        }
         return this.prisma.product.update({
             where: { id },
             data,
         });
     }
     async remove(id) {
+        const product = await this.prisma.product.findUnique({ where: { id } });
+        if (!product)
+            throw new common_1.NotFoundException('Produto não encontrado para remoção');
         return this.prisma.product.delete({ where: { id } });
     }
 };

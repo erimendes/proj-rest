@@ -95,7 +95,8 @@ exports.SessionScalarFieldEnum = {
 };
 exports.CategoryScalarFieldEnum = {
     id: 'id',
-    name: 'name'
+    name: 'name',
+    imageUrl: 'imageUrl'
 };
 exports.ProductScalarFieldEnum = {
     id: 'id',

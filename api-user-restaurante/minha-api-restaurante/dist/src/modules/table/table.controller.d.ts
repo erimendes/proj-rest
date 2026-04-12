@@ -1,9 +1,10 @@
 import { TableService } from './table.service';
 import { TableStatus } from '../../generated/prisma/client';
+import { CreateTableDto } from './dto/create-table.dto';
 export declare class TableController {
     private readonly tableService;
     constructor(tableService: TableService);
-    create(number: number): Promise<{
+    create(createTableDto: CreateTableDto): Promise<{
         number: number;
         id: string;
         status: TableStatus;

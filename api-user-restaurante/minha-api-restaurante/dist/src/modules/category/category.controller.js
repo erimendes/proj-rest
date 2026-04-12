@@ -20,19 +20,20 @@ const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_guard_1 = require("../../common/guards/roles.guard");
 const roles_decorator_1 = require("../../common/decorators/roles.decorator");
 const client_1 = require("../../generated/prisma/client");
+const create_category_dto_1 = require("./dto/create-category.dto");
 let CategoryController = class CategoryController {
     categoryService;
     constructor(categoryService) {
         this.categoryService = categoryService;
     }
-    create(name) {
-        return this.categoryService.create(name);
+    create(createCategoryDto) {
+        return this.categoryService.create(createCategoryDto.name);
     }
     findAll() {
         return this.categoryService.findAll();
     }
-    update(id, name) {
-        return this.categoryService.update(id, name);
+    update(id, updateData) {
+        return this.categoryService.update(id, updateData.name);
     }
     remove(id) {
         return this.categoryService.remove(id);
@@ -45,9 +46,9 @@ __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
     (0, swagger_1.ApiOperation)({ summary: 'Criar nova categoria (Admin/Manager)' }),
-    __param(0, (0, common_1.Body)('name')),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [create_category_dto_1.CreateCategoryDto]),
     __metadata("design:returntype", void 0)
 ], CategoryController.prototype, "create", null);
 __decorate([
@@ -64,9 +65,9 @@ __decorate([
     (0, roles_decorator_1.Roles)(client_1.Role.ADMIN, client_1.Role.MANAGER),
     (0, swagger_1.ApiOperation)({ summary: 'Atualizar nome da categoria' }),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)('name')),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, create_category_dto_1.CreateCategoryDto]),
     __metadata("design:returntype", void 0)
 ], CategoryController.prototype, "update", null);
 __decorate([
