@@ -1,3 +1,12 @@
+#!/bin/bash
+# Nome: 40-frontend-category-filters.sh
+APP_NAME="restaurante01"
+
+cd "$APP_NAME" || exit
+
+echo "📂 Implementando filtros por categoria no modal..."
+
+cat > src/modules/tables/pages/TablesPage.tsx <<'EOF'
 import { useEffect, useState } from 'react';
 import { Button } from '../../../shared/components/Button';
 import { Plus, LayoutGrid, Loader2, Hash, X, Receipt, PlusCircle, ArrowLeft, Package } from 'lucide-react';
@@ -177,3 +186,6 @@ export default function TablesPage() {
     </div>
   );
 }
+EOF
+
+echo "✅ Filtros por categoria aplicados com sucesso!"
