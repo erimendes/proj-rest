@@ -29,7 +29,7 @@ exports.AppModule = AppModule = __decorate([
             category_module_1.CategoryModule,
             product_module_1.ProductModule,
             table_module_1.TableModule,
-            order_module_1.OrderModule,
+            order_module_1.OrdersModule,
         ],
     })
 ], AppModule);

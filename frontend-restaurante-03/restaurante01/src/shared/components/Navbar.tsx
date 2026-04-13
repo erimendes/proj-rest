@@ -6,6 +6,7 @@ export function Navbar({ activeTab, setActiveTab }: any) {
   const menu = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'mesas', label: 'Mesas' },
+    { id: 'produtos', label: 'Produtos' },
     { id: 'relatorios', label: 'Relatórios' }
   ];
 
@@ -17,7 +18,11 @@ export function Navbar({ activeTab, setActiveTab }: any) {
         </div>
         <div className="flex gap-6">
           {menu.map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`text-sm font-bold cursor-pointer transition-colors ${activeTab === item.id ? 'text-orange-500' : 'text-slate-400 hover:text-white'}`}>
+            <button 
+              key={item.id} 
+              onClick={() => setActiveTab(item.id)} 
+              className={`text-sm font-bold cursor-pointer transition-colors ${activeTab === item.id ? 'text-orange-500' : 'text-slate-400 hover:text-white'}`}
+            >
               {item.label}
             </button>
           ))}

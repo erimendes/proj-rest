@@ -12,58 +12,121 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OrderService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../database/prisma.service");
-const client_1 = require("../../generated/prisma/client");
 let OrderService = class OrderService {
     prisma;
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async create(userId, tableId) {
-        const table = await this.prisma.table.findUnique({ where: { id: tableId } });
-        if (!table)
-            throw new common_1.NotFoundException('Mesa não encontrada');
-        if (table.status !== client_1.TableStatus.FREE)
-            throw new common_1.BadRequestException('Mesa ocupada');
-        return this.prisma.$transaction(async (tx) => {
-            await tx.table.update({ where: { id: tableId }, data: { status: client_1.TableStatus.OCCUPIED } });
-            return tx.order.create({ data: { userId, tableId, status: client_1.OrderStatus.PENDING, totalPrice: 0 } });
-        });
-    }
-    async addItem(orderId, productId, quantity, observation) {
-        const product = await this.prisma.product.findUnique({ where: { id: productId } });
-        if (!product)
-            throw new common_1.NotFoundException('Produto não encontrado');
-        return this.prisma.$transaction(async (tx) => {
-            await tx.orderItem.create({ data: { orderId, productId, quantity, unitPrice: product.price, observation } });
-            const allItems = await tx.orderItem.findMany({ where: { orderId } });
-            const newTotal = allItems.reduce((acc, curr) => acc + (Number(curr.unitPrice) * curr.quantity), 0);
-            return tx.order.update({ where: { id: orderId }, data: { totalPrice: newTotal } });
-        });
-    }
-    async listPending() {
-        return this.prisma.order.findMany({
-            where: { status: { in: [client_1.OrderStatus.PENDING, client_1.OrderStatus.PREPARING] } },
-            include: { items: { include: { product: true } }, table: true },
-            orderBy: { createdAt: 'asc' }
-        });
-    }
-    async updateOrderStatus(id, status) {
-        const order = await this.prisma.order.findUnique({ where: { id } });
-        if (!order)
-            throw new common_1.NotFoundException('Pedido não encontrado');
-        if (status === client_1.OrderStatus.CLOSED || status === client_1.OrderStatus.CANCELED) {
-            return this.prisma.$transaction(async (tx) => {
-                await tx.table.update({ where: { id: order.tableId }, data: { status: client_1.TableStatus.FREE } });
-                return tx.order.update({ where: { id }, data: { status } });
+    async create(userId, dto) {
+        if (!userId)
+            throw new common_1.UnauthorizedException('Usuário não identificado.');
+        console.log(`--- 🚀 CRIANDO NOVO PEDIDO: Mesa ${dto.tableId} ---`);
+        try {
+            return await this.prisma.$transaction(async (tx) => {
+                const table = await tx.table.findUnique({ where: { id: dto.tableId } });
+                if (!table)
+                    throw new common_1.NotFoundException('Mesa não encontrada.');
+                if (table.status !== 'FREE')
+                    throw new common_1.BadRequestException('Esta mesa já possui um pedido aberto.');
+                const order = await tx.order.create({
+                    data: {
+                        table: { connect: { id: dto.tableId } },
+                        user: { connect: { id: userId } },
+                        status: 'PENDING',
+                        totalPrice: 0,
+                    },
+                });
+                await tx.table.update({
+                    where: { id: dto.tableId },
+                    data: { status: 'OCCUPIED' },
+                });
+                if (dto.items && dto.items.length > 0) {
+                    let total = 0;
+                    for (const item of dto.items) {
+                        const product = await tx.product.findUnique({ where: { id: item.productId } });
+                        if (!product)
+                            throw new common_1.NotFoundException(`Produto ${item.productId} não encontrado.`);
+                        await tx.orderItem.create({
+                            data: {
+                                orderId: order.id,
+                                productId: item.productId,
+                                quantity: item.quantity,
+                                unitPrice: product.price,
+                            },
+                        });
+                        total += Number(product.price) * item.quantity;
+                    }
+                    return await tx.order.update({
+                        where: { id: order.id },
+                        data: { totalPrice: total },
+                        include: { items: { include: { product: true } } }
+                    });
+                }
+                return order;
             });
         }
-        return this.prisma.order.update({ where: { id }, data: { status } });
+        catch (error) {
+            console.error('🔥 ERRO NA CRIAÇÃO DO PEDIDO:', error.message);
+            if (error.status)
+                throw error;
+            throw new common_1.InternalServerErrorException('Erro ao processar criação do pedido.');
+        }
+    }
+    async addItem(dto) {
+        console.log(`--- ➕ ADICIONANDO ITEM: Pedido ${dto.orderId} ---`);
+        try {
+            const product = await this.prisma.product.findUnique({ where: { id: dto.productId } });
+            if (!product)
+                throw new common_1.NotFoundException('Produto não encontrado.');
+            return await this.prisma.$transaction(async (tx) => {
+                const newItem = await tx.orderItem.create({
+                    data: {
+                        orderId: dto.orderId,
+                        productId: dto.productId,
+                        quantity: dto.quantity,
+                        unitPrice: product.price,
+                        observation: dto.observation || null,
+                    },
+                });
+                const allItems = await tx.orderItem.findMany({ where: { orderId: dto.orderId } });
+                const newTotal = allItems.reduce((acc, item) => {
+                    return acc + (Number(item.unitPrice) * item.quantity);
+                }, 0);
+                await tx.order.update({
+                    where: { id: dto.orderId },
+                    data: { totalPrice: newTotal },
+                });
+                return { message: 'Item adicionado com sucesso', item: newItem, currentTotal: newTotal };
+            });
+        }
+        catch (error) {
+            console.error('❌ ERRO AO ADICIONAR ITEM:', error.message);
+            if (error.status)
+                throw error;
+            throw new common_1.InternalServerErrorException('Erro ao adicionar item ao pedido.');
+        }
+    }
+    async findAll() {
+        return this.prisma.order.findMany({
+            include: {
+                table: true,
+                user: { select: { name: true } },
+                items: { include: { product: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
     }
     async findOne(id) {
-        return this.prisma.order.findUnique({
+        const order = await this.prisma.order.findUnique({
             where: { id },
-            include: { items: { include: { product: true } }, table: true, user: { select: { name: true } } }
+            include: { items: { include: { product: true } }, table: true, user: { select: { name: true } } },
         });
+        if (!order)
+            throw new common_1.NotFoundException('Pedido não encontrado.');
+        return order;
+    }
+    async updateStatus(id, status) {
+        return this.prisma.order.update({ where: { id }, data: { status } });
     }
 };
 exports.OrderService = OrderService;

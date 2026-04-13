@@ -4,45 +4,44 @@ export declare class ProductController {
     private readonly productService;
     constructor(productService: ProductService);
     create(createProductDto: CreateProductDto): Promise<{
-        description: string | null;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
-        imageUrl: string | null;
+        description: string | null;
         price: import("@prisma/client-runtime-utils").Decimal;
+        imageUrl: string | null;
         categoryId: string;
     }>;
     findAll(categoryId?: string): Promise<({
         category: {
-            name: string;
             id: string;
-            imageUrl: string | null;
+            name: string;
         };
     } & {
-        description: string | null;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
-        imageUrl: string | null;
+        description: string | null;
         price: import("@prisma/client-runtime-utils").Decimal;
+        imageUrl: string | null;
         categoryId: string;
     })[]>;
     update(id: string, updateData: Partial<CreateProductDto>): Promise<{
-        description: string | null;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
-        imageUrl: string | null;
+        description: string | null;
         price: import("@prisma/client-runtime-utils").Decimal;
+        imageUrl: string | null;
         categoryId: string;
     }>;
     remove(id: string): Promise<{
-        description: string | null;
-        name: string;
         id: string;
+        name: string;
         createdAt: Date;
-        imageUrl: string | null;
+        description: string | null;
         price: import("@prisma/client-runtime-utils").Decimal;
+        imageUrl: string | null;
         categoryId: string;
     }>;
 }

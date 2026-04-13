@@ -51,7 +51,6 @@ export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeo
 export declare const CategoryScalarFieldEnum: {
     readonly id: "id";
     readonly name: "name";
-    readonly imageUrl: "imageUrl";
 };
 export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum];
 export declare const ProductScalarFieldEnum: {

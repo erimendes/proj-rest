@@ -1,6 +1,8 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Patch, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { OrderService } from './order.service';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { AddItemDto } from './dto/add-item.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -8,39 +10,51 @@ import { Role, OrderStatus } from '../../generated/prisma/client';
 
 @ApiTags('orders')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('orders')
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
   @Post()
-  @Roles(Role.ADMIN, Role.MANAGER, Role.WAITER)
-  create(@Req() req: any, @Body('tableId') tableId: string) {
-    return this.orderService.create(req.user.userId, tableId);
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Criar pedido' })
+  async create(@Body() createOrderDto: CreateOrderDto, @Request() req) {
+    const userId = req.user.id || req.user.sub;
+    return this.orderService.create(userId, createOrderDto);
   }
 
-  @Post(':id/items')
-  @Roles(Role.ADMIN, Role.MANAGER, Role.WAITER)
-  addItem(@Param('id') id: string, @Body() data: { productId: string, quantity: number, observation?: string }) {
-    return this.orderService.addItem(id, data.productId, data.quantity, data.observation);
+  @Post('add-item')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Adicionar item a pedido existente' })
+  async addItem(@Body() addItemDto: AddItemDto) {
+    return this.orderService.addItem(addItemDto);
   }
 
-  @Get('kitchen/pending')
-  @Roles(Role.ADMIN, Role.CHEF)
-  @ApiOperation({ summary: 'Listar pedidos pendentes para a cozinha (Admin/Chef)' })
-  listPending() {
-    return this.orderService.listPending();
+  // CORREÇÃO: Rota que o Frontend estava chamando e dando 404
+  @Get('pending')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Listar pedidos abertos' })
+  async listPending() {
+    const all = await this.orderService.findAll();
+    // Filtra apenas o que não está finalizado
+    return all.filter(order => order.status === 'PENDING' || order.status === 'PREPARING');
   }
 
-  @Patch(':id/status')
-  @Roles(Role.ADMIN, Role.MANAGER, Role.CHEF, Role.WAITER)
-  @ApiOperation({ summary: 'Alterar status do pedido (Fluxo de trabalho)' })
-  updateStatus(@Param('id') id: string, @Body('status') status: OrderStatus) {
-    return this.orderService.updateOrderStatus(id, status);
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  async findAll() {
+    return this.orderService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  @UseGuards(JwtAuthGuard)
+  async findOne(@Param('id') id: string) {
     return this.orderService.findOne(id);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.MANAGER, Role.WAITER, Role.CHEF)
+  async updateStatus(@Param('id') id: string, @Body('status') status: OrderStatus) {
+    return this.orderService.updateStatus(id, status);
   }
 }

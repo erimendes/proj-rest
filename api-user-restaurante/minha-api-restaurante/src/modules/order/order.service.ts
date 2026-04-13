@@ -1,63 +1,147 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { 
+  Injectable, 
+  NotFoundException, 
+  BadRequestException, 
+  InternalServerErrorException,
+  UnauthorizedException 
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { OrderStatus, TableStatus } from '../../generated/prisma/client';
+import { OrderStatus } from '../../generated/prisma/client';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { AddItemDto } from './dto/add-item.dto';
 
 @Injectable()
 export class OrderService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: string, tableId: string) {
-    const table = await this.prisma.table.findUnique({ where: { id: tableId } });
-    if (!table) throw new NotFoundException('Mesa não encontrada');
-    if (table.status !== TableStatus.FREE) throw new BadRequestException('Mesa ocupada');
+  /**
+   * 1. Criar pedido inicial (Usado quando a mesa está FREE)
+   */
+  async create(userId: string, dto: CreateOrderDto) {
+    if (!userId) throw new UnauthorizedException('Usuário não identificado.');
 
-    return this.prisma.$transaction(async (tx) => {
-      await tx.table.update({ where: { id: tableId }, data: { status: TableStatus.OCCUPIED } });
-      return tx.order.create({ data: { userId, tableId, status: OrderStatus.PENDING, totalPrice: 0 } });
-    });
-  }
+    console.log(`--- 🚀 CRIANDO NOVO PEDIDO: Mesa ${dto.tableId} ---`);
 
-  async addItem(orderId: string, productId: string, quantity: number, observation?: string) {
-    const product = await this.prisma.product.findUnique({ where: { id: productId } });
-    if (!product) throw new NotFoundException('Produto não encontrado');
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // Validar Mesa
+        const table = await tx.table.findUnique({ where: { id: dto.tableId } });
+        if (!table) throw new NotFoundException('Mesa não encontrada.');
+        if (table.status !== 'FREE') throw new BadRequestException('Esta mesa já possui um pedido aberto.');
 
-    return this.prisma.$transaction(async (tx) => {
-      await tx.orderItem.create({ data: { orderId, productId, quantity, unitPrice: product.price, observation } });
-      const allItems = await tx.orderItem.findMany({ where: { orderId } });
-      const newTotal = allItems.reduce((acc, curr) => acc + (Number(curr.unitPrice) * curr.quantity), 0);
-      return tx.order.update({ where: { id: orderId }, data: { totalPrice: newTotal } });
-    });
-  }
+        // Criar a Order
+        const order = await tx.order.create({
+          data: {
+            table: { connect: { id: dto.tableId } },
+            user: { connect: { id: userId } },
+            status: 'PENDING',
+            totalPrice: 0,
+          },
+        });
 
-  // --- NOVAS FUNÇÕES DO SCRIPT 09 ---
+        // Ocupar a Mesa
+        await tx.table.update({
+          where: { id: dto.tableId },
+          data: { status: 'OCCUPIED' },
+        });
 
-  async listPending() {
-    return this.prisma.order.findMany({
-      where: { status: { in: [OrderStatus.PENDING, OrderStatus.PREPARING] } },
-      include: { items: { include: { product: true } }, table: true },
-      orderBy: { createdAt: 'asc' }
-    });
-  }
+        // Processar itens iniciais
+        if (dto.items && dto.items.length > 0) {
+          let total = 0;
+          for (const item of dto.items) {
+            const product = await tx.product.findUnique({ where: { id: item.productId } });
+            if (!product) throw new NotFoundException(`Produto ${item.productId} não encontrado.`);
 
-  async updateOrderStatus(id: string, status: OrderStatus) {
-    const order = await this.prisma.order.findUnique({ where: { id } });
-    if (!order) throw new NotFoundException('Pedido não encontrado');
+            await tx.orderItem.create({
+              data: {
+                orderId: order.id,
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: product.price,
+              },
+            });
+            total += Number(product.price) * item.quantity;
+          }
 
-    // Se o pedido for fechado ou cancelado, liberamos a mesa
-    if (status === OrderStatus.CLOSED || status === OrderStatus.CANCELED) {
-      return this.prisma.$transaction(async (tx) => {
-        await tx.table.update({ where: { id: order.tableId }, data: { status: TableStatus.FREE } });
-        return tx.order.update({ where: { id }, data: { status } });
+          return await tx.order.update({
+            where: { id: order.id },
+            data: { totalPrice: total },
+            include: { items: { include: { product: true } } }
+          });
+        }
+
+        return order;
       });
+    } catch (error) {
+      console.error('🔥 ERRO NA CRIAÇÃO DO PEDIDO:', error.message);
+      if (error.status) throw error;
+      throw new InternalServerErrorException('Erro ao processar criação do pedido.');
     }
+  }
 
-    return this.prisma.order.update({ where: { id }, data: { status } });
+  /**
+   * 2. Adicionar Item a pedido existente (Usado quando a mesa está OCCUPIED)
+   */
+  async addItem(dto: AddItemDto) {
+    console.log(`--- ➕ ADICIONANDO ITEM: Pedido ${dto.orderId} ---`);
+
+    try {
+      const product = await this.prisma.product.findUnique({ where: { id: dto.productId } });
+      if (!product) throw new NotFoundException('Produto não encontrado.');
+
+      return await this.prisma.$transaction(async (tx) => {
+        // Criar o item vinculado à Order existente
+        const newItem = await tx.orderItem.create({
+          data: {
+            orderId: dto.orderId,
+            productId: dto.productId,
+            quantity: dto.quantity,
+            unitPrice: product.price,
+            observation: dto.observation || null,
+          },
+        });
+
+        // Recalcular Total da Order
+        const allItems = await tx.orderItem.findMany({ where: { orderId: dto.orderId } });
+        const newTotal = allItems.reduce((acc, item) => {
+          return acc + (Number(item.unitPrice) * item.quantity);
+        }, 0);
+
+        await tx.order.update({
+          where: { id: dto.orderId },
+          data: { totalPrice: newTotal },
+        });
+
+        return { message: 'Item adicionado com sucesso', item: newItem, currentTotal: newTotal };
+      });
+    } catch (error) {
+      console.error('❌ ERRO AO ADICIONAR ITEM:', error.message);
+      if (error.status) throw error;
+      throw new InternalServerErrorException('Erro ao adicionar item ao pedido.');
+    }
+  }
+
+  async findAll() {
+    return this.prisma.order.findMany({
+      include: { 
+        table: true, 
+        user: { select: { name: true } }, 
+        items: { include: { product: true } } 
+      },
+      orderBy: { createdAt: 'desc' }
+    });
   }
 
   async findOne(id: string) {
-    return this.prisma.order.findUnique({
+    const order = await this.prisma.order.findUnique({
       where: { id },
-      include: { items: { include: { product: true } }, table: true, user: { select: { name: true } } }
+      include: { items: { include: { product: true } }, table: true, user: { select: { name: true } } },
     });
+    if (!order) throw new NotFoundException('Pedido não encontrado.');
+    return order;
+  }
+
+  async updateStatus(id: string, status: OrderStatus) {
+    return this.prisma.order.update({ where: { id }, data: { status } });
   }
 }

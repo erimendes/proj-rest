@@ -18,6 +18,7 @@ export default function HomePage() {
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="p-8 max-w-6xl mx-auto">
         {activeTab === 'dashboard' && <DashboardView />}
+        {activeTab === 'dashboard' && <DashboardView />}
         {activeTab === 'mesas' && <TablesPage />}
         {activeTab === 'relatorios' && <div className="py-20 text-center text-slate-500">Relatórios em breve...</div>}
       </main>

@@ -3,33 +3,29 @@ export declare class CategoryService {
     private prisma;
     constructor(prisma: PrismaService);
     create(name: string): Promise<{
-        name: string;
         id: string;
-        imageUrl: string | null;
+        name: string;
     }>;
     findAll(): Promise<({
         products: {
-            description: string | null;
-            name: string;
             id: string;
+            name: string;
             createdAt: Date;
-            imageUrl: string | null;
+            description: string | null;
             price: import("@prisma/client-runtime-utils").Decimal;
+            imageUrl: string | null;
             categoryId: string;
         }[];
     } & {
-        name: string;
         id: string;
-        imageUrl: string | null;
+        name: string;
     })[]>;
     update(id: string, name: string): Promise<{
-        name: string;
         id: string;
-        imageUrl: string | null;
+        name: string;
     }>;
     remove(id: string): Promise<{
-        name: string;
         id: string;
-        imageUrl: string | null;
+        name: string;
     }>;
 }
