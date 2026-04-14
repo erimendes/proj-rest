@@ -7,24 +7,24 @@ export declare class OrderService {
     constructor(prisma: PrismaService);
     create(userId: string, dto: CreateOrderDto): Promise<{
         id: string;
-        tableId: string;
-        userId: string;
-        status: OrderStatus;
-        totalPrice: import("@prisma/client-runtime-utils").Decimal;
         createdAt: Date;
         updatedAt: Date;
+        userId: string;
+        status: OrderStatus;
+        tableId: string;
+        totalPrice: import("@prisma/client-runtime-utils").Decimal;
     }>;
     addItem(dto: AddItemDto): Promise<{
         message: string;
         item: {
             id: string;
-            status: string;
             createdAt: Date;
-            orderId: string;
+            status: string;
             productId: string;
             quantity: number;
-            unitPrice: import("@prisma/client-runtime-utils").Decimal;
+            orderId: string;
             observation: string | null;
+            unitPrice: import("@prisma/client-runtime-utils").Decimal;
         };
         currentTotal: number;
     }>;
@@ -39,32 +39,32 @@ export declare class OrderService {
         };
         items: ({
             product: {
+                description: string | null;
                 name: string;
                 id: string;
                 createdAt: Date;
-                description: string | null;
                 price: import("@prisma/client-runtime-utils").Decimal;
-                imageUrl: string | null;
                 categoryId: string;
+                imageUrl: string | null;
             };
         } & {
             id: string;
-            status: string;
             createdAt: Date;
-            orderId: string;
+            status: string;
             productId: string;
             quantity: number;
-            unitPrice: import("@prisma/client-runtime-utils").Decimal;
+            orderId: string;
             observation: string | null;
+            unitPrice: import("@prisma/client-runtime-utils").Decimal;
         })[];
     } & {
         id: string;
-        tableId: string;
-        userId: string;
-        status: OrderStatus;
-        totalPrice: import("@prisma/client-runtime-utils").Decimal;
         createdAt: Date;
         updatedAt: Date;
+        userId: string;
+        status: OrderStatus;
+        tableId: string;
+        totalPrice: import("@prisma/client-runtime-utils").Decimal;
     })[]>;
     findOne(id: string): Promise<{
         user: {
@@ -77,40 +77,40 @@ export declare class OrderService {
         };
         items: ({
             product: {
+                description: string | null;
                 name: string;
                 id: string;
                 createdAt: Date;
-                description: string | null;
                 price: import("@prisma/client-runtime-utils").Decimal;
-                imageUrl: string | null;
                 categoryId: string;
+                imageUrl: string | null;
             };
         } & {
             id: string;
-            status: string;
             createdAt: Date;
-            orderId: string;
+            status: string;
             productId: string;
             quantity: number;
-            unitPrice: import("@prisma/client-runtime-utils").Decimal;
+            orderId: string;
             observation: string | null;
+            unitPrice: import("@prisma/client-runtime-utils").Decimal;
         })[];
     } & {
         id: string;
-        tableId: string;
-        userId: string;
-        status: OrderStatus;
-        totalPrice: import("@prisma/client-runtime-utils").Decimal;
         createdAt: Date;
         updatedAt: Date;
+        userId: string;
+        status: OrderStatus;
+        tableId: string;
+        totalPrice: import("@prisma/client-runtime-utils").Decimal;
     }>;
     updateStatus(id: string, status: OrderStatus): Promise<{
         id: string;
-        tableId: string;
-        userId: string;
-        status: OrderStatus;
-        totalPrice: import("@prisma/client-runtime-utils").Decimal;
         createdAt: Date;
         updatedAt: Date;
+        userId: string;
+        status: OrderStatus;
+        tableId: string;
+        totalPrice: import("@prisma/client-runtime-utils").Decimal;
     }>;
 }

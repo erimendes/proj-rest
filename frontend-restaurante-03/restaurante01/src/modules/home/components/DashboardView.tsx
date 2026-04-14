@@ -2,7 +2,7 @@ import { TrendingUp, Users, Package, Activity } from 'lucide-react';
 
 export function DashboardView() {
   const cards = [
-    { label: 'Vendas', val: 'R$ 0,00', icon: TrendingUp, color: 'text-green-500' },
+    { label: 'Vendas01', val: 'R$ 0,00', icon: TrendingUp, color: 'text-green-500' },
     { label: 'Clientes', val: '0', icon: Users, color: 'text-blue-500' },
     { label: 'Estoque', val: '12', icon: Package, color: 'text-orange-500' },
     { label: 'Ativas', val: '0', icon: Activity, color: 'text-purple-500' },

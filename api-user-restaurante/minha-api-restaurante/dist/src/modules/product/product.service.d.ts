@@ -4,58 +4,58 @@ export declare class ProductService {
     private prisma;
     constructor(prisma: PrismaService);
     create(data: CreateProductDto): Promise<{
-        id: string;
-        name: string;
-        createdAt: Date;
         description: string | null;
+        name: string;
+        id: string;
+        createdAt: Date;
         price: import("@prisma/client-runtime-utils").Decimal;
-        imageUrl: string | null;
         categoryId: string;
+        imageUrl: string | null;
     }>;
     findAll(): Promise<({
         category: {
-            id: string;
             name: string;
+            id: string;
         };
     } & {
-        id: string;
-        name: string;
-        createdAt: Date;
         description: string | null;
+        name: string;
+        id: string;
+        createdAt: Date;
         price: import("@prisma/client-runtime-utils").Decimal;
-        imageUrl: string | null;
         categoryId: string;
+        imageUrl: string | null;
     })[]>;
     findByCategory(categoryId: string): Promise<({
         category: {
-            id: string;
             name: string;
+            id: string;
         };
     } & {
-        id: string;
-        name: string;
-        createdAt: Date;
         description: string | null;
+        name: string;
+        id: string;
+        createdAt: Date;
         price: import("@prisma/client-runtime-utils").Decimal;
-        imageUrl: string | null;
         categoryId: string;
+        imageUrl: string | null;
     })[]>;
     update(id: string, data: Partial<CreateProductDto>): Promise<{
-        id: string;
-        name: string;
-        createdAt: Date;
         description: string | null;
+        name: string;
+        id: string;
+        createdAt: Date;
         price: import("@prisma/client-runtime-utils").Decimal;
-        imageUrl: string | null;
         categoryId: string;
+        imageUrl: string | null;
     }>;
     remove(id: string): Promise<{
-        id: string;
-        name: string;
-        createdAt: Date;
         description: string | null;
+        name: string;
+        id: string;
+        createdAt: Date;
         price: import("@prisma/client-runtime-utils").Decimal;
-        imageUrl: string | null;
         categoryId: string;
+        imageUrl: string | null;
     }>;
 }
