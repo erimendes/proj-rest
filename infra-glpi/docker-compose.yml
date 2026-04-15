@@ -1,0 +1,27 @@
+services:
+  glpi-db:
+    image: mariadb:latest
+    container_name: glpi-mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: root_password
+      MARIADB_DATABASE: glpidb
+      MARIADB_USER: glpiuser
+      MARIADB_PASSWORD: glpipassword
+    volumes:
+      - glpi_db_data:/var/lib/mysql
+
+  glpi:
+    image: glpi/glpi:latest
+    container_name: glpi-app
+    ports:
+      - "8082:80"
+    environment:
+      DB_HOSTNAME: glpi-db
+      DB_NAME: glpidb
+      DB_USERNAME: glpiuser
+      DB_PASSWORD: glpipassword
+    depends_on:
+      - glpi-db
+
+volumes:
+  glpi_db_data:
