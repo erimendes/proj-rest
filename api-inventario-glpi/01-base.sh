@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_NAME="minha-api-moderna"
+PROJECT_NAME="minha-api-glpi"
 
 log() {
   echo -e "\033[1;32m$1\033[0m"
@@ -117,7 +117,7 @@ datasource db {
 }
 
 // --- MÓDULO DE USUÁRIOS ---
-model User {
+model Usuario {
   id           String    @id @default(uuid())
   email        String    @unique
   password     String
@@ -134,8 +134,8 @@ model User {
 model Session {
   id           String   @id @default(uuid())
   refreshToken String
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usuarioId    String
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   userAgent    String?
   ip           String?
   revoked      Boolean  @default(false)
