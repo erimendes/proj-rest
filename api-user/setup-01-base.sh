@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_NAME="minha-api-moderna"
+PROJECT_NAME="minha-api-user"
 
 log() {
   echo -e "\033[1;32m$1\033[0m"
@@ -46,9 +46,9 @@ DB_PORT=5432
 DB_USER=postgres
 DB_PASS=postgres
 DB_MAIN_DATABASE=postgres
-NEW_PROJECT_DB=minha_api_rest
+NEW_PROJECT_DB=minha_api_user
 
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/minha_api_rest?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/minha_api_user?schema=public"
 JWT_SECRET="super-secret"
 EOF
 
@@ -169,24 +169,36 @@ EOF
 #########################################
 mkdir -p src/modules/user/dto
 cat << 'EOF' > src/modules/user/dto/create-user.dto.ts
-import { IsEmail, IsString, MinLength, IsOptional, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsString, MinLength, IsOptional, IsNotEmpty, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+// Importe o Enum do Prisma para garantir que as opções sejam idênticas
+import { Role } from '../../../generated/prisma/client'; 
 
 export class CreateUserDto {
   @ApiProperty({ example: 'teste01@teste.com' }) 
   @IsEmail() 
-  email: string;
+  email!: string;
 
   @ApiProperty() 
   @IsString()
   @IsNotEmpty()
   @MinLength(6) 
-  password: string;
+  password!: string;
 
-  @ApiProperty({ example: 'string' })
+  @ApiProperty({ example: 'João Silva' })
   @IsOptional() 
   @IsString() 
   name?: string;
+
+  // ADICIONE ESTE CAMPO:
+  @ApiProperty({ 
+    enum: Role, 
+    example: 'ADMIN',
+    description: 'Nível de acesso do usuário' 
+  })
+  @IsOptional() // Ou @IsNotEmpty() se quiser obrigar a escolha
+  @IsEnum(Role, { message: 'A role deve ser um dos valores: USER, ADMIN, MANAGER, WAITER, CHEF' })
+  role?: Role;
 }
 EOF
 

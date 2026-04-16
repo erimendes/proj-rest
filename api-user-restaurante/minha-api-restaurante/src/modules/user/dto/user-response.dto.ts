@@ -2,17 +2,20 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class UserResponseDto {
   @ApiProperty({ example: 1 })
-  id: number;
+  id!: number;
 
   @ApiProperty({ example: 'usuario@exemplo.com' })
-  email: string;
+  email!: string;
 
   @ApiProperty({ example: 'João Silva', nullable: true })
-  name: string | null;
+  name!: string | null;
 
   @ApiProperty({ example: 'USER' })
-  role: string;
+  role!: string;
 
   @ApiProperty()
-  createdAt: Date;
+  createdAt!: Date;
+
+  @ApiProperty()
+  updatedAt!: Date;
 }
