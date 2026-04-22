@@ -3,37 +3,35 @@ set -euo pipefail
 
 PROJECT_NAME="minha-api-glpi"
 
-log() {
-  echo -e "\033[1;32m$1\033[0m"
-}
+# Cores e Estilos
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+NC='\033[0m'
 
-log "🚀 Iniciando projeto NestJS Profissional..."
+log() { echo -e "${GREEN}==> $1${NC}"; }
+
+echo -e "${BLUE}🚀 INICIANDO SETUP: $PROJECT_NAME${NC}"
+
+# 1. Criação do Projeto
 npx @nestjs/cli@latest new "$PROJECT_NAME" --package-manager npm --skip-git
-
 cd "$PROJECT_NAME"
 
-#########################################
-# 📦 Instalação de Dependências
-#########################################
-log "📦 Instalando pacotes (Core, Prisma, Auth, DB Utils)..."
-npm install \
-  @nestjs/config \
-  @nestjs/swagger \
-  @nestjs/jwt \
-  @nestjs/passport \
-  swagger-ui-express \
-  class-validator \
-  class-transformer \
-  passport \
-  passport-jwt \
-  bcrypt \
-  @prisma/client \
-  pg \
-  dotenv \
-  @prisma/adapter-pg
+# 2. Instalação de Dependências
+log "Instalando dependências principais..."
+npm install @nestjs/config @nestjs/jwt @nestjs/passport class-validator class-transformer passport passport-jwt bcrypt argon2
+npm install -D @types/passport-jwt @types/bcrypt ts-node
 
-npm install -D prisma ts-node @types/pg @types/node @types/passport-jwt @types/bcrypt
+log "Instalando Prisma e drivers..."
+npm install @prisma/client pg
+npm install -D prisma @types/pg
 
+log "Instalando npm i @prisma/adapter-pg para compatibilidade com Prisma Client v5..."
+npm install -D @prisma/adapter-pg
+
+log "Instalando Swagger..."
+npm install @nestjs/swagger swagger-ui-express
+
+log "Iniciando Prisma..."
 npx prisma init --datasource-provider postgresql
 
 #########################################
@@ -50,6 +48,11 @@ NEW_PROJECT_DB=minha_api_glpi
 
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/minha_api_glpi?schema=public"
 JWT_SECRET="super-secret"
+
+# Configurações do GLPI (O que o erro pediu)
+GLPI_API_URL="https://seu-glpi.com/apirest.php"
+GLPI_APP_TOKEN="seu_app_token_aqui"
+GLPI_USER_TOKEN="seu_user_token_aqui"
 EOF
 
 #########################################
@@ -99,6 +102,9 @@ EOF
 
 # Adiciona script no package.json
 sed -i 's/"scripts": {/"scripts": {\n    "db:create": "ts-node src\/scripts\/sync-criar-banco.ts",/' package.json
+# Inserção do script no package.json
+# npx json -I -f package.json -e 'this.scripts["db:create"]="ts-node src/scripts/sync-criar-banco.ts"'
+
 
 #########################################
 # 💎 Prisma schema
@@ -117,14 +123,13 @@ datasource db {
 }
 
 // --- MÓDULO DE USUÁRIOS ---
-model Usuario {
+model User {
   id           String    @id @default(uuid())
   email        String    @unique
   password     String
   name         String?
   role         Role      @default(USER)
   departamento String?
-  ativos       Ativo[] 
   sessions     Session[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -132,15 +137,15 @@ model Usuario {
 
 // --- MÓDULO DE SESSÕES ---
 model Session {
-  id           String   @id @default(uuid())
+  id           Int      @id @default(autoincrement())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
   refreshToken String
-  usuarioId    String
-  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   userAgent    String?
   ip           String?
-  revoked      Boolean  @default(false)
-  expiresAt    DateTime
   createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  revoked      Boolean  @default(false)
 }
 
 // --- ENUMS PARA PADRONIZAÇÃO ---
@@ -156,17 +161,36 @@ EOF
 #########################################
 mkdir -p src/database
 cat << 'EOF' > src/database/prisma.service.ts
-import { Injectable } from "@nestjs/common";
+import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from "@nestjs/common";
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 @Injectable()
-export class PrismaService extends PrismaClient {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
+
+  private readonly logger = new Logger(PrismaService.name);
   constructor() {
     const adapter = new PrismaPg({
       connectionString: process.env.DATABASE_URL as string,
     });
     super({ adapter });
+  }
+
+  async onModuleInit() {
+    try {
+      await this.$connect();
+      this.logger.log('Conexão com o banco estabelecida.');
+    } catch (err) {
+      this.logger.error('Falha ao conectar no banco:', err);
+      throw err;
+    }
+  }
+
+  async onModuleDestroy() {
+    await this.$disconnect();
   }
 }
 EOF
@@ -181,145 +205,6 @@ import { PrismaService } from './prisma.service';
   exports: [PrismaService],
 })
 export class PrismaModule {}
-EOF
-
-#########################################
-# 👤 User Module
-#########################################
-mkdir -p src/modules/user/dto
-cat << 'EOF' > src/modules/user/dto/create-user.dto.ts
-import { IsEmail, IsString, MinLength, IsOptional, IsNotEmpty, IsEnum } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-// Importe o Enum do Prisma para garantir que as opções sejam idênticas
-import { Role } from '../../../generated/prisma/client'; 
-
-export class CreateUserDto {
-  @ApiProperty({ example: 'teste01@teste.com' }) 
-  @IsEmail() 
-  email!: string;
-
-  @ApiProperty() 
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(6) 
-  password!: string;
-
-  @ApiProperty({ example: 'João Silva' })
-  @IsOptional() 
-  @IsString() 
-  name?: string;
-
-  // ADICIONE ESTE CAMPO:
-  @ApiProperty({ 
-    enum: Role, 
-    example: 'ADMIN',
-    description: 'Nível de acesso do usuário' 
-  })
-  @IsOptional() // Ou @IsNotEmpty() se quiser obrigar a escolha
-  @IsEnum(Role, { message: 'A role deve ser um dos valores: USER, ADMIN, MANAGER, WAITER, CHEF' })
-  role?: Role;
-}
-EOF
-
-cat << 'EOF' > src/modules/user/user.service.ts
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../database/prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import * as bcrypt from 'bcrypt';
-
-@Injectable()
-export class UserService {
-  constructor(private prisma: PrismaService) {}
-
-  async create(data: CreateUserDto) {
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    return this.prisma.user.create({
-      data: { ...data, password: hashedPassword },
-    });
-  }
-
-  async findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
-  }
-
-  async findAll() {
-    return this.prisma.user.findMany({
-      select: { id: true, email: true, name: true, role: true }
-    });
-  }
-}
-EOF
-
-cat << 'EOF' > src/modules/user/user.controller.ts
-import { Controller, Get, Post, Body } from '@nestjs/common';
-import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { ApiTags } from '@nestjs/swagger';
-
-@ApiTags('users')
-@Controller('users')
-export class UserController {
-  constructor(private readonly userService: UserService) {}
-  @Post() create(@Body() createUserDto: CreateUserDto) { return this.userService.create(createUserDto); }
-  @Get() findAll() { return this.userService.findAll(); }
-}
-EOF
-
-cat << 'EOF' > src/modules/user/user.module.ts
-import { Module } from '@nestjs/common';
-import { UserService } from './user.service';
-import { UserController } from './user.controller';
-
-@Module({
-  controllers: [UserController],
-  providers: [UserService],
-  exports: [UserService],
-})
-export class UserModule {}
-EOF
-
-#########################################
-# 🔐 Auth Module
-#########################################
-mkdir -p src/modules/auth
-cat << 'EOF' > src/modules/auth/auth.module.ts
-import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { UserModule } from '../user/user.module';
-
-@Module({
-  imports: [
-    UserModule,
-    PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '1d' },
-    }),
-  ],
-})
-export class AuthModule {}
-EOF
-
-#########################################
-# 🏗️ AppModule
-#########################################
-cat << 'EOF' > src/app.module.ts
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { PrismaModule } from './database/prisma.module';
-import { UserModule } from './modules/user/user.module';
-import { AuthModule } from './modules/auth/auth.module';
-
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
-    PrismaModule,
-    UserModule,
-    AuthModule,
-  ],
-})
-export class AppModule {}
 EOF
 
 #########################################
@@ -381,10 +266,6 @@ cat << 'EOF' > tsconfig.json
     "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
-    "baseUrl": "./",
-    "paths": {
-      "@generated/*": ["src/generated/*"]
-    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
@@ -413,13 +294,8 @@ export default defineConfig({
 });
 EOF
 
-
-#########################################
-# 🔧 Prisma Migrations & Client
-#########################################
-log "⚙️ Criando banco e gerando Prisma Client..."
+# 6. Finalização
+log "⚙️ Executando criação de banco..."
 npm run db:create
-npx prisma migrate dev --name init
-npx prisma generate
-
-log "✅ Script concluído com sucesso!"
+log "✅ Ambiente pronto! Execute 'npm run start:dev' para começar."
+echo -e "\n${BLUE}✅ TUDO PRONTO!${NC}"

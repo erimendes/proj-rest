@@ -1,0 +1,12 @@
+import * as Prisma from './internal/prismaNamespaceBrowser.js';
+export { Prisma };
+export * as $Enums from './enums.js';
+export * from './enums.js';
+export type User = Prisma.UserModel;
+export type Session = Prisma.SessionModel;
+export type Ativo = Prisma.AtivoModel;
+export type Aplicacao = Prisma.AplicacaoModel;
+export type ConfigRede = Prisma.ConfigRedeModel;
+export type Software = Prisma.SoftwareModel;
+export type Licenca = Prisma.LicencaModel;
+export type LicencaAtivo = Prisma.LicencaAtivoModel;

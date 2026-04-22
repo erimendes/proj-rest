@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.defineExtension = exports.NullsOrder = exports.QueryMode = exports.SortOrder = exports.OrderItemScalarFieldEnum = exports.OrderScalarFieldEnum = exports.TableScalarFieldEnum = exports.ProductScalarFieldEnum = exports.CategoryScalarFieldEnum = exports.SessionScalarFieldEnum = exports.UserScalarFieldEnum = exports.TransactionIsolationLevel = exports.ModelName = exports.AnyNull = exports.JsonNull = exports.DbNull = exports.NullTypes = exports.prismaVersion = exports.getExtensionContext = exports.Decimal = exports.Sql = exports.raw = exports.join = exports.empty = exports.sql = exports.PrismaClientValidationError = exports.PrismaClientInitializationError = exports.PrismaClientRustPanicError = exports.PrismaClientUnknownRequestError = exports.PrismaClientKnownRequestError = void 0;
+exports.defineExtension = exports.NullsOrder = exports.QueryMode = exports.SortOrder = exports.SessionScalarFieldEnum = exports.UserScalarFieldEnum = exports.TransactionIsolationLevel = exports.ModelName = exports.AnyNull = exports.JsonNull = exports.DbNull = exports.NullTypes = exports.prismaVersion = exports.getExtensionContext = exports.Decimal = exports.Sql = exports.raw = exports.join = exports.empty = exports.sql = exports.PrismaClientValidationError = exports.PrismaClientInitializationError = exports.PrismaClientRustPanicError = exports.PrismaClientUnknownRequestError = exports.PrismaClientKnownRequestError = void 0;
 const runtime = __importStar(require("@prisma/client/runtime/client"));
 exports.PrismaClientKnownRequestError = runtime.PrismaClientKnownRequestError;
 exports.PrismaClientUnknownRequestError = runtime.PrismaClientUnknownRequestError;
@@ -61,12 +61,7 @@ exports.JsonNull = runtime.JsonNull;
 exports.AnyNull = runtime.AnyNull;
 exports.ModelName = {
     User: 'User',
-    Session: 'Session',
-    Category: 'Category',
-    Product: 'Product',
-    Table: 'Table',
-    Order: 'Order',
-    OrderItem: 'OrderItem'
+    Session: 'Session'
 };
 exports.TransactionIsolationLevel = runtime.makeStrictEnum({
     ReadUncommitted: 'ReadUncommitted',
@@ -80,56 +75,19 @@ exports.UserScalarFieldEnum = {
     password: 'password',
     name: 'name',
     role: 'role',
+    departamento: 'departamento',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
 };
 exports.SessionScalarFieldEnum = {
     id: 'id',
-    refreshToken: 'refreshToken',
     userId: 'userId',
+    refreshToken: 'refreshToken',
     userAgent: 'userAgent',
     ip: 'ip',
-    revoked: 'revoked',
-    expiresAt: 'expiresAt',
-    createdAt: 'createdAt'
-};
-exports.CategoryScalarFieldEnum = {
-    id: 'id',
-    name: 'name',
-    imageUrl: 'imageUrl'
-};
-exports.ProductScalarFieldEnum = {
-    id: 'id',
-    name: 'name',
-    description: 'description',
-    price: 'price',
-    imageUrl: 'imageUrl',
-    categoryId: 'categoryId',
-    createdAt: 'createdAt'
-};
-exports.TableScalarFieldEnum = {
-    id: 'id',
-    number: 'number',
-    status: 'status'
-};
-exports.OrderScalarFieldEnum = {
-    id: 'id',
-    tableId: 'tableId',
-    userId: 'userId',
-    status: 'status',
-    totalPrice: 'totalPrice',
     createdAt: 'createdAt',
-    updatedAt: 'updatedAt'
-};
-exports.OrderItemScalarFieldEnum = {
-    id: 'id',
-    status: 'status',
-    orderId: 'orderId',
-    productId: 'productId',
-    quantity: 'quantity',
-    unitPrice: 'unitPrice',
-    observation: 'observation',
-    createdAt: 'createdAt'
+    expiresAt: 'expiresAt',
+    revoked: 'revoked'
 };
 exports.SortOrder = {
     asc: 'asc',

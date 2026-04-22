@@ -11,31 +11,7 @@
 
 export const Role = {
   USER: 'USER',
-  ADMIN: 'ADMIN',
-  MANAGER: 'MANAGER',
-  WAITER: 'WAITER',
-  CHEF: 'CHEF'
+  ADMIN: 'ADMIN'
 } as const
 
 export type Role = (typeof Role)[keyof typeof Role]
-
-
-export const TableStatus = {
-  FREE: 'FREE',
-  OCCUPIED: 'OCCUPIED',
-  RESERVED: 'RESERVED'
-} as const
-
-export type TableStatus = (typeof TableStatus)[keyof typeof TableStatus]
-
-
-export const OrderStatus = {
-  PENDING: 'PENDING',
-  PREPARING: 'PREPARING',
-  READY: 'READY',
-  CLOSED: 'CLOSED',
-  DELIVERED: 'DELIVERED',
-  CANCELED: 'CANCELED'
-} as const
-
-export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus]

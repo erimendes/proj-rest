@@ -52,12 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
-  Session: 'Session',
-  Category: 'Category',
-  Product: 'Product',
-  Table: 'Table',
-  Order: 'Order',
-  OrderItem: 'OrderItem'
+  Session: 'Session'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -82,6 +77,7 @@ export const UserScalarFieldEnum = {
   password: 'password',
   name: 'name',
   role: 'role',
+  departamento: 'departamento',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -91,74 +87,16 @@ export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof User
 
 export const SessionScalarFieldEnum = {
   id: 'id',
-  refreshToken: 'refreshToken',
   userId: 'userId',
+  refreshToken: 'refreshToken',
   userAgent: 'userAgent',
   ip: 'ip',
-  revoked: 'revoked',
+  createdAt: 'createdAt',
   expiresAt: 'expiresAt',
-  createdAt: 'createdAt'
+  revoked: 'revoked'
 } as const
 
 export type SessionScalarFieldEnum = (typeof SessionScalarFieldEnum)[keyof typeof SessionScalarFieldEnum]
-
-
-export const CategoryScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  imageUrl: 'imageUrl'
-} as const
-
-export type CategoryScalarFieldEnum = (typeof CategoryScalarFieldEnum)[keyof typeof CategoryScalarFieldEnum]
-
-
-export const ProductScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  description: 'description',
-  price: 'price',
-  imageUrl: 'imageUrl',
-  categoryId: 'categoryId',
-  createdAt: 'createdAt'
-} as const
-
-export type ProductScalarFieldEnum = (typeof ProductScalarFieldEnum)[keyof typeof ProductScalarFieldEnum]
-
-
-export const TableScalarFieldEnum = {
-  id: 'id',
-  number: 'number',
-  status: 'status'
-} as const
-
-export type TableScalarFieldEnum = (typeof TableScalarFieldEnum)[keyof typeof TableScalarFieldEnum]
-
-
-export const OrderScalarFieldEnum = {
-  id: 'id',
-  tableId: 'tableId',
-  userId: 'userId',
-  status: 'status',
-  totalPrice: 'totalPrice',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type OrderScalarFieldEnum = (typeof OrderScalarFieldEnum)[keyof typeof OrderScalarFieldEnum]
-
-
-export const OrderItemScalarFieldEnum = {
-  id: 'id',
-  status: 'status',
-  orderId: 'orderId',
-  productId: 'productId',
-  quantity: 'quantity',
-  unitPrice: 'unitPrice',
-  observation: 'observation',
-  createdAt: 'createdAt'
-} as const
-
-export type OrderItemScalarFieldEnum = (typeof OrderItemScalarFieldEnum)[keyof typeof OrderItemScalarFieldEnum]
 
 
 export const SortOrder = {

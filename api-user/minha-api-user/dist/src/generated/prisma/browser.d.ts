@@ -4,8 +4,3 @@ export * as $Enums from './enums.js';
 export * from './enums.js';
 export type User = Prisma.UserModel;
 export type Session = Prisma.SessionModel;
-export type Category = Prisma.CategoryModel;
-export type Product = Prisma.ProductModel;
-export type Table = Prisma.TableModel;
-export type Order = Prisma.OrderModel;
-export type OrderItem = Prisma.OrderItemModel;

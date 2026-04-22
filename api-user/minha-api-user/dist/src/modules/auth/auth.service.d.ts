@@ -21,5 +21,11 @@ export declare class AuthService {
         accessToken: string;
         refreshToken: string;
     }>;
+    logout(sessionId: number): Promise<{
+        message: string;
+    }>;
+    logoutAll(userId: number): Promise<{
+        message: string;
+    }>;
     private generateTokens;
 }

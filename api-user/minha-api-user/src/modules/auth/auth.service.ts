@@ -23,7 +23,24 @@ export class AuthService {
       name,
     });
 
-    return this.generateTokens(user);
+    const session = await this.prisma.session.create({
+  data: {
+    userId: user.id,
+    refreshToken: '',
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  },
+});
+
+const tokens = await this.generateTokens(user, session.id);
+
+const hashedRt = await argon2.hash(tokens.refreshToken);
+
+await this.prisma.session.update({
+  where: { id: session.id },
+  data: { refreshToken: hashedRt },
+});
+
+return tokens;
   }
 
   async login(data: any, meta: { ip?: string; userAgent?: string }) {
@@ -33,18 +50,22 @@ export class AuthService {
     const valid = await argon2.verify(user.password, data.password);
     if (!valid) throw new UnauthorizedException('Credenciais inválidas');
 
-    const tokens = await this.generateTokens(user);
-    const hashedRt = await argon2.hash(tokens.refreshToken);
-
-    // Criamos a sessão no banco para permitir controle de logout/refresh
-    await this.prisma.session.create({
+    // 1. cria sessão
+    const session = await this.prisma.session.create({
       data: {
         userId: user.id,
-        refreshToken: hashedRt,
-        userAgent: meta.userAgent,
-        ip: meta.ip,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 dias
+        refreshToken: '',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
+    });
+
+    const tokens = await this.generateTokens(user, session.id);
+
+    const hashedRt = await argon2.hash(tokens.refreshToken);
+
+    await this.prisma.session.update({
+      where: { id: session.id },
+      data: { refreshToken: hashedRt },
     });
 
     return tokens;
@@ -52,65 +73,86 @@ export class AuthService {
 
   async refresh(refreshToken: string) {
     try {
-      // 1. Validar o token e extrair o payload
       const payload = await this.jwt.verifyAsync(refreshToken, {
         secret: process.env.JWT_SECRET,
       });
 
-      // 2. Buscar sessões ativas do usuário
       const sessions = await this.prisma.session.findMany({
         where: { userId: payload.sub, revoked: false },
       });
 
       for (const session of sessions) {
-        // 3. Comparar o Refresh Token enviado com o hash do banco
         const valid = await argon2.verify(session.refreshToken, refreshToken);
 
         if (valid) {
-          // 1. Busca o usuário
           const user = await this.users.findByEmail(payload.email);
+          if (!user) throw new UnauthorizedException();
 
-          // 2. Verificação de segurança (Resolve o erro TS18047)
-          if (!user) {
-            throw new UnauthorizedException('Usuário não encontrado');
-          }
-
-          // 3. Invalida a sessão atual
           await this.prisma.session.update({
             where: { id: session.id },
             data: { revoked: true },
           });
 
-          // 4. Gera novos tokens
-          const newTokens = await this.generateTokens(user);
-          
-          // 5. Salva a nova sessão
-          const newHashedRt = await argon2.hash(newTokens.refreshToken);
-          await this.prisma.session.create({
+          const newSession = await this.prisma.session.create({
             data: {
-              userId: user.id, // Agora o TS sabe que 'user' não é null
-              refreshToken: newHashedRt,
+              userId: user.id,
+              refreshToken: '',
               expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             },
           });
 
-          return newTokens;
+          const tokens = await this.generateTokens(user, newSession.id);
+
+          const hashedRt = await argon2.hash(tokens.refreshToken);
+
+          await this.prisma.session.update({
+            where: { id: newSession.id },
+            data: { refreshToken: hashedRt },
+          });
+
+          return tokens;
         }
       }
-      
-      throw new UnauthorizedException('Sessão inválida');
 
-    } catch (e) {
+      throw new UnauthorizedException('Sessão inválida');
+    } catch {
       throw new UnauthorizedException('Token inválido ou expirado');
     }
   }
 
-  private async generateTokens(user: any) {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+  async logout(sessionId: number) {
+    await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { revoked: true },
+    });
+
+    return { message: 'Logout realizado com sucesso' };
+  }
+
+  async logoutAll(userId: number) {
+    await this.prisma.session.updateMany({
+      where: { 
+        userId: String(userId), 
+        revoked: false },
+      data: { revoked: true },
+    });
+
+    return { message: 'Logout de todos os dispositivos realizado' };
+  }
+
+  private async generateTokens(user: any, sessionId: number | null) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      sessionId,
+    };
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, { expiresIn: '15m' }),
       this.jwt.signAsync(payload, { expiresIn: '7d' }),
     ]);
+
     return { accessToken, refreshToken };
   }
 }

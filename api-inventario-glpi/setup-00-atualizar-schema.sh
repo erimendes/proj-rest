@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_NAME="minha-api-restaurante"
+# Nome do projeto consistente com os seus anteriores
+PROJECT_NAME="minha-api-glpi"
 cd "$PROJECT_NAME"
 
 GREEN='\033[0;32m'
@@ -10,11 +11,12 @@ NC='\033[0m'
 
 echo -e "${BLUE}🔄 ATUALIZANDO SCHEMA GLOBAL DO PRISMA${NC}"
 
+log() { echo -e "${GREEN}👉 $1${NC}"; }
+
 #########################################
 # PASSO 1: SOBRESCREVER O SCHEMA.PRISMA
 #########################################
-echo -e "${GREEN}👉 Passo 1: Aplicando nova estrutura de tabelas...${NC}"
-
+log "Passo 1: Aplicando nova estrutura de tabelas..."
 cat << 'EOF' > prisma/schema.prisma
 generator client {
   provider = "prisma-client"
@@ -30,7 +32,7 @@ datasource db {
 // 5. PESSOAL E CUSTÓDIA
 // ==========================================
 
-model Usuario {
+model User {
   id           String    @id @default(uuid())
   email        String    @unique
   password     String
@@ -43,12 +45,11 @@ model Usuario {
   updatedAt    DateTime  @updatedAt
 }
 
-// --- MÓDULO DE SESSÕES ---
 model Session {
   id           String   @id @default(uuid())
   refreshToken String
-  usuarioId    String
-  usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   userAgent    String?
   ip           String?
   revoked      Boolean  @default(false)
@@ -56,16 +57,13 @@ model Session {
   createdAt    DateTime @default(now())
 }
 
-// --- ENUMS PARA PADRONIZAÇÃO ---
-
 enum Role {
   USER
   ADMIN
 }
 
-
 // ==========================================
-// 1. INVENTÁRIO DE HARDWARE (Ativos e Servidores)
+// 1. INVENTÁRIO DE HARDWARE
 // ==========================================
 
 model Ativo {
@@ -76,8 +74,7 @@ model Ativo {
   modelo          String
   numSerie        String        @unique
   hostname        String?       @unique
- 
-  // Especificações técnicas (Baseado na sua lista)
+  
   cpu             String?
   ram             String?
   discoFisico     String?
@@ -86,16 +83,17 @@ model Ativo {
   dataCompra      DateTime?
   valor           Decimal?      @db.Decimal(10, 2)
 
-  // Virtualização (Hyper-V / VMware)
+  // Virtualização
   isVirtualizado  Boolean       @default(false)
-  hyperVName      String?       // Nome da VM no Hyper-V
-  hostFisicoId    Int?          // Se for VM, aponta para o ID do servidor físico
+  hyperVName      String?
+  hostFisicoId    Int?
   vms             Ativo[]       @relation("HostVms")
   host            Ativo?        @relation("HostVms", fields: [hostFisicoId], references: [id])
 
-  // Relacionamentos
-  usuarioId       Int?
-  usuario         Usuario?      @relation(fields: [usuarioId], references: [id])
+  // Relacionamentos - CORRIGIDO: userId deve ser String para bater com User.id
+  userId       String?
+  user         User?      @relation(fields: [userId], references: [id])
+  
   configRede      ConfigRede?
   licencas        LicencaAtivo[]
   aplicacoes      Aplicacao[]   @relation("AppServidores")
@@ -106,36 +104,32 @@ model Ativo {
 }
 
 // ==========================================
-// 2. INVENTÁRIO DE SISTEMAS (Sua imagem do Excel)
+// 2. INVENTÁRIO DE SISTEMAS
 // ==========================================
 
 model Aplicacao {
-  id                Int              @id @default(autoincrement())
-  nome              String
-  sigla             String?          @unique
-  descricao         String?          @db.Text
-  categoria         SistemaCategoria @default(OPERACIONAL)
-  criticidade       Criticidade      @default(MEDIA)
- 
-  // Gestão de Negócio (Campos da imagem)
-  businessOwner     String?          // Área Usuária
-  responsavelTecnico String?         // Responsável STI
-  contatoFuncional  String?
-  fornecedor        String?
- 
-  // Resiliência e Operação
-  janelaOperacao    String?          // Ex: 24/7
-  backupInfo        String?          // Existe/Onde
-  procedimentoRecup String?          @db.Text
-  pontoUnicoFalha   String?          @db.Text
+  id                 Int              @id @default(autoincrement())
+  nome               String
+  sigla              String?          @unique
+  descricao          String?          @db.Text
+  categoria          SistemaCategoria @default(OPERACIONAL)
+  criticidade        Criticidade      @default(MEDIA)
+  
+  businessOwner      String?
+  responsavelTecnico String?
+  contatoFuncional   String?
+  fornecedor         String?
+  
+  janelaOperacao     String?
+  backupInfo         String?
+  procedimentoRecup  String?          @db.Text
+  pontoUnicoFalha    String?          @db.Text
 
-  // Stack Tecnológica
-  tecnologiaPrincipal String?        // Stack
-  databaseInfo        String?        // Tipo/SGBD e Versão
-  integracoes         String?        @db.Text
+  tecnologiaPrincipal String?
+  databaseInfo        String?
+  integracoes         String?          @db.Text
 
-  // Relacionamento: Onde a aplicação está hospedada
-  servidores        Ativo[]          @relation("AppServidores")
+  servidores         Ativo[]          @relation("AppServidores")
 }
 
 // ==========================================
@@ -149,9 +143,9 @@ model ConfigRede {
   vlan           Int?
   portasUTP      Int?
   portasFibra    Int?
-  storageConect  String? // Nome do Storage/LUN
-  discoStorage   String? // Tamanho alocado no Storage
- 
+  storageConect  String?
+  discoStorage   String?
+  
   ativo          Ativo   @relation(fields: [ativoId], references: [id])
   ativoId        Int     @unique
 }
@@ -178,17 +172,17 @@ model Licenca {
 }
 
 model LicencaAtivo {
-  id        Int      @id @default(autoincrement())
-  ativo     Ativo    @relation(fields: [ativoId], references: [id])
-  ativoId   Int
-  licenca   Licenca  @relation(fields: [licencaId], references: [id])
-  licencaId Int
+  id         Int      @id @default(autoincrement())
+  ativo      Ativo    @relation(fields: [ativoId], references: [id])
+  ativoId    Int
+  licenca    Licenca  @relation(fields: [licencaId], references: [id])
+  licencaId  Int
   dataInstalacao DateTime @default(now())
 
   @@unique([ativoId, licencaId])
 }
 
-// --- ENUMS PARA PADRONIZAÇÃO ---
+// --- ENUMS ---
 
 enum AtivoTipo {
   LAPTOP
@@ -224,11 +218,10 @@ EOF
 #########################################
 # PASSO 2: SINCRONIZAR BANCO E TIPOS
 #########################################
-echo -e "${GREEN}👉 Passo 2: Sincronizando com o PostgreSQL (db push)...${NC}"
+log "Passo 2: Sincronizando com o PostgreSQL (db push)..."
 npx prisma db push
 
-echo -e "${GREEN}👉 Passo 3: Gerando Prisma Client (generate)...${NC}"
+log "Passo 3: Gerando Prisma Client (generate)..."
 npx prisma generate
 
 echo -e "\n${BLUE}✅ SCHEMA ATUALIZADO COM SUCESSO!${NC}"
-echo -e "As tabelas de Pedidos, Mesas e Produtos já existem no seu banco."
