@@ -17,6 +17,7 @@ class UserResponseDto {
     name;
     role;
     createdAt;
+    updatedAt;
 }
 exports.UserResponseDto = UserResponseDto;
 __decorate([
@@ -39,4 +40,8 @@ __decorate([
     (0, swagger_1.ApiProperty)(),
     __metadata("design:type", Date)
 ], UserResponseDto.prototype, "createdAt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    __metadata("design:type", Date)
+], UserResponseDto.prototype, "updatedAt", void 0);
 //# sourceMappingURL=user-response.dto.js.map

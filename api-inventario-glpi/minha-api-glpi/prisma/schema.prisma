@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==========================================
+// 5. PESSOAL E CUSTÓDIA
+// ==========================================
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  password     String
+  name         String?
+  role         Role      @default(USER)
+  departamento String?
+  ativos       Ativo[] 
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  refreshToken String
+  userId    String
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent    String?
+  ip           String?
+  revoked      Boolean  @default(false)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// ==========================================
+// 1. INVENTÁRIO DE HARDWARE
+// ==========================================
+
+model Ativo {
+  id              Int           @id @default(autoincrement())
+  tagPatrimonial  String        @unique
+  tipo            AtivoTipo     @default(LAPTOP)
+  fabricante      String
+  modelo          String
+  numSerie        String        @unique
+  hostname        String?       @unique
+  
+  cpu             String?
+  ram             String?
+  discoFisico     String?
+  status          AtivoStatus   @default(DISPONIVEL)
+  emUso           Boolean       @default(true)
+  dataCompra      DateTime?
+  valor           Decimal?      @db.Decimal(10, 2)
+
+  // Virtualização
+  isVirtualizado  Boolean       @default(false)
+  hyperVName      String?
+  hostFisicoId    Int?
+  vms             Ativo[]       @relation("HostVms")
+  host            Ativo?        @relation("HostVms", fields: [hostFisicoId], references: [id])
+
+  // Relacionamentos - CORRIGIDO: userId deve ser String para bater com User.id
+  userId       String?
+  user         User?      @relation(fields: [userId], references: [id])
+  
+  configRede      ConfigRede?
+  licencas        LicencaAtivo[]
+  aplicacoes      Aplicacao[]   @relation("AppServidores")
+
+  observacoes     String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+// ==========================================
+// 2. INVENTÁRIO DE SISTEMAS
+// ==========================================
+
+model Aplicacao {
+  id                 Int              @id @default(autoincrement())
+  nome               String
+  sigla              String?          @unique
+  descricao          String?          @db.Text
+  categoria          SistemaCategoria @default(OPERACIONAL)
+  criticidade        Criticidade      @default(MEDIA)
+  
+  businessOwner      String?
+  responsavelTecnico String?
+  contatoFuncional   String?
+  fornecedor         String?
+  
+  janelaOperacao     String?
+  backupInfo         String?
+  procedimentoRecup  String?          @db.Text
+  pontoUnicoFalha    String?          @db.Text
+
+  tecnologiaPrincipal String?
+  databaseInfo        String?
+  integracoes         String?          @db.Text
+
+  servidores         Ativo[]          @relation("AppServidores")
+}
+
+// ==========================================
+// 3. INFRAESTRUTURA DE REDE
+// ==========================================
+
+model ConfigRede {
+  id             Int     @id @default(autoincrement())
+  ipAddress      String?
+  macAddress     String  @unique
+  vlan           Int?
+  portasUTP      Int?
+  portasFibra    Int?
+  storageConect  String?
+  discoStorage   String?
+  
+  ativo          Ativo   @relation(fields: [ativoId], references: [id])
+  ativoId        Int     @unique
+}
+
+// ==========================================
+// 4. SOFTWARE E LICENCIAMENTO
+// ==========================================
+
+model Software {
+  id          Int       @id @default(autoincrement())
+  nome        String
+  versao      String?
+  fabricante  String
+  licencas    Licenca[]
+}
+
+model Licenca {
+  id             Int            @id @default(autoincrement())
+  chaveAtivacao  String         @unique
+  dataExpiracao  DateTime?
+  software       Software       @relation(fields: [softwareId], references: [id])
+  softwareId     Int
+  instacoes      LicencaAtivo[]
+}
+
+model LicencaAtivo {
+  id         Int      @id @default(autoincrement())
+  ativo      Ativo    @relation(fields: [ativoId], references: [id])
+  ativoId    Int
+  licenca    Licenca  @relation(fields: [licencaId], references: [id])
+  licencaId  Int
+  dataInstalacao DateTime @default(now())
+
+  @@unique([ativoId, licencaId])
+}
+
+// --- ENUMS ---
+
+enum AtivoTipo {
+  LAPTOP
+  DESKTOP
+  SERVIDOR_FISICO
+  SERVIDOR_VIRTUAL
+  SWITCH
+  ROTEADOR
+  STORAGE
+  MONITOR
+}
+
+enum AtivoStatus {
+  DISPONIVEL
+  EM_USO
+  MANUTENCAO
+  DESCARTADO
+}
+
+enum SistemaCategoria {
+  ADMINISTRATIVO
+  OPERACIONAL
+}
+
+enum Criticidade {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}

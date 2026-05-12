@@ -9,6 +9,7 @@ export declare class UserService {
         name: string | null;
         id: string;
         role: import("../../generated/prisma/enums").Role;
+        id: string;
         createdAt: Date;
     }>;
     update(id: string, data: UpdateUserDto): Promise<{
@@ -16,6 +17,7 @@ export declare class UserService {
         name: string | null;
         id: string;
         role: import("../../generated/prisma/enums").Role;
+        id: string;
     }>;
     findByEmail(email: string): Promise<{
         email: string;
@@ -23,6 +25,7 @@ export declare class UserService {
         name: string | null;
         id: string;
         role: import("../../generated/prisma/enums").Role;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
     } | null>;
@@ -31,12 +34,14 @@ export declare class UserService {
         name: string | null;
         id: string;
         role: import("../../generated/prisma/enums").Role;
+        id: string;
     }>;
     findAll(): Promise<{
         email: string;
         name: string | null;
         id: string;
         role: import("../../generated/prisma/enums").Role;
+        id: string;
         createdAt: Date;
     }[]>;
     remove(id: string): Promise<{
@@ -45,6 +50,7 @@ export declare class UserService {
         name: string | null;
         id: string;
         role: import("../../generated/prisma/enums").Role;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
     }>;

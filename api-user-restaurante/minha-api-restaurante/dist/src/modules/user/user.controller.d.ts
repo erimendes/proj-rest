@@ -10,6 +10,7 @@ export declare class UserController {
         name: string | null;
         id: string;
         role: Role;
+        id: string;
         createdAt: Date;
     }>;
     findAll(): Promise<{
@@ -17,6 +18,7 @@ export declare class UserController {
         name: string | null;
         id: string;
         role: Role;
+        id: string;
         createdAt: Date;
     }[]>;
     updateMe(req: any, body: UpdateUserDto): Promise<{
@@ -24,6 +26,7 @@ export declare class UserController {
         name: string | null;
         id: string;
         role: Role;
+        id: string;
     }>;
     remove(id: string): Promise<{
         email: string;
@@ -31,6 +34,7 @@ export declare class UserController {
         name: string | null;
         id: string;
         role: Role;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
     }>;
